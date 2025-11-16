@@ -44,7 +44,7 @@ import os
 import sys
 import platform
 import traceback
-import cPickle
+import pickle
 import shutil
 import string
 import array
@@ -56,21 +56,21 @@ import bisect
 import random, math, copy
 import subprocess, shlex
 import socket
-import thread
+import _thread
 import threading
 import time
-import StringIO
+import io
 import textwrap
 import ctypes
 import tempfile
 import zlib
 import glob
-import urllib2
+import urllib.request, urllib.error, urllib.parse
 import cgi
 if os.name == 'nt':
-    import _winreg
+    import winreg
 from hashlib import md5
-import __builtin__
+import builtins
 import collections
 
 if hasattr(sys,'frozen'):
@@ -86,7 +86,7 @@ def _(s):
         if s2:
             return s2.replace(r'\n','\n')
     return s
-__builtin__._ = _
+builtins._ = _
 encoding = sys.getfilesystemencoding()
 
 import wx
@@ -138,7 +138,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
     STC_AVS_CLIPPROPERTY, STC_AVS_USERFUNCTION, STC_AVS_UNKNOWNFUNCTION, 
     STC_AVS_USERSLIDER, STC_AVS_SCRIPTFUNCTION, STC_AVS_PARAMETER, 
     STC_AVS_ASSIGN, STC_AVS_KEYWORD, STC_AVS_MISCWORD, 
-    STC_AVS_DATATYPE, STC_AVS_IDENTIFIER) = range(23)
+    STC_AVS_DATATYPE, STC_AVS_IDENTIFIER) = list(range(23))
     def __init__(self, parent, app, id=wx.ID_ANY, pos=wx.DefaultPosition, size=wx.DefaultSize, style=wx.SIMPLE_BORDER,
             #~ filterDict=None,
             #~ filterPresetDict=None,
@@ -527,7 +527,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             self.StyleSetSize(stc.STC_STYLE_DEFAULT, size)
         self.StyleClearAll()  # Reset all to be like the default
 
-        for style, (key, extra) in self.styleInfo.iteritems():
+        for style, (key, extra) in self.styleInfo.items():
             self.StyleSetSpec(style, textstyles.get(key, default) + extra)
             if monospaced:
                 self.StyleSetFaceName(style, face)
@@ -677,7 +677,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         line1 = self.LineFromPosition(self.GetSelectionStart())
         line2 = self.LineFromPosition(self.GetSelectionEnd())
         self.BeginUndoAction()
-        for line in xrange(line1, line2+1):
+        for line in range(line1, line2+1):
             txt = self.GetLine(line)
             if txt.strip():
                 pos = self.PositionFromLine(line) + len(txt) - len(txt.lstrip())
@@ -705,17 +705,17 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                 self.SetTargetEnd(pos+1)
             self.ReplaceTarget('')
         else:
-            if pos > start and unichr(self.GetCharAt(pos)) == '.' and self.GetStyleAt(pos-1) == self.STC_AVS_NUMBER:
+            if pos > start and chr(self.GetCharAt(pos)) == '.' and self.GetStyleAt(pos-1) == self.STC_AVS_NUMBER:
                 pos -= 1
                 style = self.STC_AVS_NUMBER
             while pos > start and self.GetStyleAt(pos-1) == style:
                 pos -= 1
-            if pos > start and unichr(self.GetCharAt(pos-1)) == '.':
+            if pos > start and chr(self.GetCharAt(pos-1)) == '.':
                 pos -= 1
             if style == self.STC_AVS_NUMBER:
                 while pos > start and self.GetStyleAt(pos-1) == style:
                     pos -= 1
-                if pos > start and unichr(self.GetCharAt(pos-1)) in '+-':
+                if pos > start and chr(self.GetCharAt(pos-1)) in '+-':
                     pos -= 1
             self.InsertText(pos, '#~ ')                
 
@@ -866,7 +866,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                     minPos = startwordpos
                     maxPos = self.GetCurrentPos()
                     startSelectionPos = endSelectionPos = None
-                    for i in xrange(nCursorTags):
+                    for i in range(nCursorTags):
                         findpos = self.FindText(minPos, maxPos, cursorTag, stc.STC_FIND_MATCHCASE)
                         if findpos != -1:
                             self.SetSelection(findpos, findpos + len(cursorTag))
@@ -900,7 +900,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             self.GotoPos(pos+2)
             return
         level = self.app.options['autoparentheses']
-        if unichr(self.GetCharAt(pos)) == '(':
+        if chr(self.GetCharAt(pos)) == '(':
             level = 0
         if level==0:
             pass
@@ -930,7 +930,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         else:
             dir, base = os.path.split(ac_str)
         try:
-            filenames = sorted([path for path in os.listdir(os.path.join(prefix, dir) or unicode(os.curdir)) 
+            filenames = sorted([path for path in os.listdir(os.path.join(prefix, dir) or str(os.curdir)) 
                                 if not base or os.path.normcase(path).startswith(os.path.normcase(base))], 
                                key=lambda s: s.upper())
         except OSError:
@@ -941,7 +941,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             else:
                 self.autocomplete_params = pos, start, end, prefix, dir
                 if self.app.options['autocompleteicons']:
-                    filenames = [u'{0}?{1}'.format(file, 5 if os.path.isdir(os.path.join(prefix, dir, file)) 
+                    filenames = ['{0}?{1}'.format(file, 5 if os.path.isdir(os.path.join(prefix, dir, file)) 
                                  else 6) for file in filenames]
                 self.autocomplete_case = 'filename'
                 self.AutoCompStops('')
@@ -987,8 +987,8 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                     matched_args[arg_name] = arg_type, arg_info
             if matched_args:
                 if len(matched_args) == 1:
-                    arg_name, (arg_type, arg_info) = matched_args.items()[0]
-                    if unichr(self.GetCharAt(pos)) == '=':
+                    arg_name, (arg_type, arg_info) = list(matched_args.items())[0]
+                    if chr(self.GetCharAt(pos)) == '=':
                         new_text = arg_name
                     else:
                         new_text = arg_name + '='
@@ -997,7 +997,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                     self.GotoPos(arg_start_pos + self.ReplaceTarget(new_text))
                     self.AutocompleteParameterValue(arg_type, arg_info)
                 else:
-                    args = matched_args.keys()
+                    args = list(matched_args.keys())
                     args.sort(key=lambda s: s.upper())
                     self.autocomplete_case = 'parameter name'
                     self.autocomplete_params = matched_args
@@ -1061,7 +1061,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                 self.CmdKeyExecute(wx.stc.STC_CMD_CANCEL)
                 if self.autocomplete_case == 'snippet':
                         return
-            tag_list = [tag for tag, text in self.app.options['snippets'].iteritems() if text]
+            tag_list = [tag for tag, text in self.app.options['snippets'].items() if text]
             if tag_list:
                 self.autocomplete_case = 'snippet'
                 self.autocomplete_params = pos
@@ -1203,7 +1203,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                         a, b = argPosList[iArgPos]
                     except IndexError:
                         if __debug__:
-                            print>>sys.stderr, 'Error in UpdateCalltip: invalid iArgPos'
+                            print('Error in UpdateCalltip: invalid iArgPos', file=sys.stderr)
             self.CallTipSetHighlight(a,b)
         else:
             self.calltipOpenpos = None
@@ -1219,7 +1219,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         nclose = 1
         stylesToSkip = (self.STC_AVS_STRING, self.STC_AVS_TRIPLE, self.STC_AVS_USERSLIDER)
         while pos >= 0:
-            c = unichr(self.GetCharAt(pos))
+            c = chr(self.GetCharAt(pos))
             if self.GetStyleAt(pos) not in stylesToSkip:
                 if c == ')':
                     nclose += 1
@@ -1330,7 +1330,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         pos1 = openpos
         posEnd = None
         while pos1 < self.GetLength():
-            if unichr(self.GetCharAt(pos1)) == '(':
+            if chr(self.GetCharAt(pos1)) == '(':
                 posEnd = self.BraceMatch(pos1)
                 if posEnd == -1:
                     posEnd = self.GetLineEndPosition(line) #self.GetLength()
@@ -1368,7 +1368,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                 argvalue = argvalue.strip(string.whitespace+'\\')
                 argtype = 'named'
             except ValueError:
-                argname = u''
+                argname = ''
                 argvalue = txt
                 argname = argname.strip(string.whitespace+'\\')
                 argvalue = argvalue.strip(string.whitespace+'\\')
@@ -1430,14 +1430,14 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                     name, info = [s.strip() for s in nameAndInfo.split('=', 1)]
                 except ValueError:
                     name = nameAndInfo
-                    info = u''
+                    info = ''
                 argInfo.append((item, argtype.lower(), name, boolMulti, boolOptional, info))
             except ValueError:
                 if item.lower() in ('clip', 'int', 'float', 'bool', 'string'):
-                    argInfo.append((item, item.lower(), u'', boolMulti, boolOptional, u''))
+                    argInfo.append((item, item.lower(), '', boolMulti, boolOptional, ''))
                 else:
                     # Assume it's a clip
-                    argInfo.append((item, u'clip', item, boolMulti, boolOptional, u''))
+                    argInfo.append((item, 'clip', item, boolMulti, boolOptional, ''))
         return argInfo
 
     def CreateDefaultPreset(self, filtername, calltip=None):
@@ -1560,7 +1560,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             #~ newPos += 1
         nOpen = 0
         while pos <= self.GetLength():
-            c = unichr(self.GetCharAt(pos))
+            c = chr(self.GetCharAt(pos))
             if c == '(' and not allowparentheses:
                 pos = self.BraceMatch(pos)
                 if pos == wx.NOT_FOUND:
@@ -1681,13 +1681,13 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             default_css = self.GenerateCSSBlock('default', join=False, 
                                                 monospaced=monospaced)
             css = {'default': self.JoinCSSBlock('default', default_css)}
-            default_css = default_css.items()
+            default_css = list(default_css.items())
         last_style = self.GetStyleAt(0)
         style_start = 0
         length = self.GetLength()
         if not length:
             return
-        for pos in xrange(0, length + 1):
+        for pos in range(0, length + 1):
             if pos != length:
                 style = self.GetStyleAt(pos)
                 if style == last_style:
@@ -1698,25 +1698,25 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                                                         monospaced=monospaced)
             text = cgi.escape(self.GetTextRange(style_start, pos), True)
             if style_name != 'default':
-                text = u'<span class="{0}">{1}</span>'.format(style_name, text)
+                text = '<span class="{0}">{1}</span>'.format(style_name, text)
             body.append(text)
             last_style = style
             style_start = pos
-        body = u'<body>\n<pre class="default">\n{0}\n</pre>\n</body>'.format(
+        body = '<body>\n<pre class="default">\n{0}\n</pre>\n</body>'.format(
                                                                   ''.join(body))
         css =  self.GenerateCSS(monospaced=monospaced) if ext_css else \
-               '\n'.join(css.values())
+               '\n'.join(list(css.values()))
         
         # Generate the head, inserting the css if required
         title = cgi.escape(title or _('AviSynth script'), True)
-        generator = cgi.escape(u'{0} v{1}'.format(global_vars.name, 
+        generator = cgi.escape('{0} v{1}'.format(global_vars.name, 
                                global_vars.version), True)
         if ext_css:
-            head_css = u'<link rel="stylesheet" type="text/css" '\
+            head_css = '<link rel="stylesheet" type="text/css" '\
                         'href="{0}">'.format(ext_css)
         else:
-            head_css = u'<style type="text/css">\n{0}\n</style>'.format(css)
-        head = textwrap.dedent(u'''\
+            head_css = '<style type="text/css">\n{0}\n</style>'.format(css)
+        head = textwrap.dedent('''\
             <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
             "http://www.w3.org/TR/html4/strict.dtd">
             <html>
@@ -1728,7 +1728,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             </head>''').format(generator, title, head_css)
         
         # Return the html file, and optionally the style sheet
-        html = u'{0}\n{1}\n</html>'.format(head, body)
+        html = '{0}\n{1}\n</html>'.format(head, body)
         if ext_css:
             return html, css
         return html
@@ -1739,7 +1739,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         Override face and size with 'monospaced', if given
         """
         css = []
-        for style, (key, extra) in self.styleInfo.iteritems():
+        for style, (key, extra) in self.styleInfo.items():
             css.append(self.GenerateCSSBlock(key, monospaced=monospaced))
         return '\n'.join(css)
     
@@ -1773,7 +1773,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                                 fallback = 'serif'
                             else:
                                 fallback = 'sans-serif'
-                            value = u'"{0}", {1}'.format(value, fallback)
+                            value = '"{0}", {1}'.format(value, fallback)
                     elif attr == 'size':
                         if monospaced:
                             value = monospaced[1]
@@ -1790,9 +1790,9 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
     def JoinCSSBlock(css_class, css):
         """Generate a CSS block from a property: value dict"""
         declarations = []
-        for property, value in css.iteritems():
-            declarations.append(u"\n\t{0}: {1};".format(property, value))
-        return u".{0} {{{1}\n}}".format(css_class, ''.join(declarations))
+        for property, value in css.items():
+            declarations.append("\n\t{0}: {1};".format(property, value))
+        return ".{0} {{{1}\n}}".format(css_class, ''.join(declarations))
     
     # Event functions
 
@@ -1806,13 +1806,13 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         braceAtCaret = -1
         braceOpposite = -1
         # check before
-        if charBefore and unichr(charBefore) in "[]{}()":# and styleBefore == stc.STC_P_OPERATOR:
+        if charBefore and chr(charBefore) in "[]{}()":# and styleBefore == stc.STC_P_OPERATOR:
             braceAtCaret = caretPos - 1
         # check after
         if braceAtCaret < 0:
             charAfter = self.GetCharAt(caretPos)
             #~ styleAfter = self.GetStyleAt(caretPos)
-            if charAfter and unichr(charAfter) in "[]{}()":# and styleAfter == stc.STC_P_OPERATOR:
+            if charAfter and chr(charAfter) in "[]{}()":# and styleAfter == stc.STC_P_OPERATOR:
                 braceAtCaret = caretPos
         if braceAtCaret >= 0:
             braceOpposite = self.BraceMatch(braceAtCaret)
@@ -1836,7 +1836,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                 hasBrace = False
                 hasBlock = False
                 for pos in range(self.PositionFromLine(line), self.GetLineEndPosition(line)+1):
-                    if unichr(self.GetCharAt(pos)) == '{' and self.GetStyleAt(pos) == self.STC_AVS_OPERATOR:
+                    if chr(self.GetCharAt(pos)) == '{' and self.GetStyleAt(pos) == self.STC_AVS_OPERATOR:
                         hasBrace = True
                         break
                 if not hasBrace:
@@ -1909,7 +1909,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         self.flagTextChanged = True
     
     def OnTextCharAdded(self, event):
-        if unichr(event.GetKey()) == '\n':
+        if chr(event.GetKey()) == '\n':
             line = self.GetCurrentLine() - 1
             indentText = self.GetTextRange(self.PositionFromLine(line), self.GetLineIndentPosition(line))
             self.AddText(indentText)
@@ -1952,7 +1952,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         and self.GetStyleAt(pos-1) not in self.nonBraceStyles:
             start = self.WordStartPosition(pos,1)
             end = self.WordEndPosition(pos,1)
-            char = unichr(self.GetCharAt(start))
+            char = chr(self.GetCharAt(start))
             if pos == end:
                 if self.app.options['autocomplete']\
                 and (char.isalpha() and char.isupper() or char == '_')\
@@ -2010,7 +2010,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             def post_autocomplete(arg_name):
                 # add an equals sign
                 pos = self.GetCurrentPos()
-                if unichr(self.GetCharAt(pos)) == '=':
+                if chr(self.GetCharAt(pos)) == '=':
                     self.GotoPos(pos + 1)
                 else:
                     self.AddText('=')
@@ -2023,7 +2023,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             # AutoCompSetDropRestOfWord doesn't include quotes
             pos = self.GetCurrentPos()
             self.SetTargetStart(pos)
-            while unichr(self.GetCharAt(pos)) in (' ', '?') or self.IsString(pos):
+            while chr(self.GetCharAt(pos)) in (' ', '?') or self.IsString(pos):
                 pos += 1
             self.SetTargetEnd(pos)
             self.BeginUndoAction()
@@ -2098,19 +2098,19 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         string_delimiters = ['"', "'"] if self.filename.endswith('.vpy') else '"'
         self.StartStyling(pos, 31)
         while pos <= end:
-            ch = unichr(self.GetCharAt(pos))
-            isEOD = (ch == unichr(0))
+            ch = chr(self.GetCharAt(pos))
+            isEOD = (ch == chr(0))
             isEOL = (ch == '\n' or ch == '\r' or isEOD)
             if state == self.STC_AVS_DEFAULT:
                 if ch == '#':
                     state = self.STC_AVS_COMMENT
-                elif ch == '/' and unichr(self.GetCharAt(pos+1)) == '*':
+                elif ch == '/' and chr(self.GetCharAt(pos+1)) == '*':
                     pos += 1
                     flag = True
                     state = self.STC_AVS_BLOCKCOMMENT
                 elif ch in string_delimiters:
                     self.ColourTo(pos-1, state)
-                    if unichr(self.GetCharAt(pos+1)) in string_delimiters and unichr(self.GetCharAt(pos+2)) in string_delimiters:
+                    if chr(self.GetCharAt(pos+1)) in string_delimiters and chr(self.GetCharAt(pos+2)) in string_delimiters:
                         pos += 2
                         if self.app.options['syntaxhighlight_styleinsidetriplequotes']:
                             self.ColourTo(pos, self.STC_AVS_TRIPLE)
@@ -2124,13 +2124,13 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                 elif ch == '$':
                     hexfragment = []
                     state = self.STC_AVS_NUMBERBAD
-                elif ch == '[' and unichr(self.GetCharAt(pos+1)) == '*':
+                elif ch == '[' and chr(self.GetCharAt(pos+1)) == '*':
                     pos += 1
                     isCommentNest += 1
                     self.SetLineState(self.LineFromPosition(pos), isCommentNest)
                     flag = True
                     state = self.STC_AVS_BLOCKCOMMENT
-                elif ch == '[' and unichr(self.GetCharAt(pos+1)) == '<':
+                elif ch == '[' and chr(self.GetCharAt(pos+1)) == '<':
                     pos += 1
                     state = self.STC_AVS_USERSLIDER
                 elif ch.isalpha() or ch == '_' or ch in self.app.avssingleletters:
@@ -2163,7 +2163,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                 elif isEOL:
                     self.SetLineState(self.LineFromPosition(pos), isCommentNest)
                 elif isCommentNest:
-                    if ch == '*' and unichr(self.GetCharAt(pos+1)) == ']':
+                    if ch == '*' and chr(self.GetCharAt(pos+1)) == ']':
                         pos += 1
                         isCommentNest -= 1
                         self.SetLineState(self.LineFromPosition(pos), isCommentNest)
@@ -2171,12 +2171,12 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                         if not isCommentNest:
                             self.ColourTo(pos, self.STC_AVS_BLOCKCOMMENT)
                             state = self.STC_AVS_DEFAULT
-                    elif ch == '[' and unichr(self.GetCharAt(pos+1)) == '*':
+                    elif ch == '[' and chr(self.GetCharAt(pos+1)) == '*':
                         pos += 1
                         isCommentNest += 1
                         self.SetLineState(self.LineFromPosition(pos), isCommentNest)
                         flag = True
-                elif ch == '*' and unichr(self.GetCharAt(pos+1)) == '/':
+                elif ch == '*' and chr(self.GetCharAt(pos+1)) == '/':
                     pos += 1
                     self.ColourTo(pos, self.STC_AVS_BLOCKCOMMENT)
                     flag = None if flag else False
@@ -2188,10 +2188,10 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                     pos2 = pos
                     pos -= 1
                     word =''.join(fragment).lower()
-                    while unichr(self.GetCharAt(pos2)) in (u' ', u'\t'):
+                    while chr(self.GetCharAt(pos2)) in (' ', '\t'):
                         pos2 += 1
-                    ch2 = unichr(self.GetCharAt(pos2))
-                    if word in self.app.avsdatatypes and unichr(self.GetCharAt(pos+1)).isspace():
+                    ch2 = chr(self.GetCharAt(pos2))
+                    if word in self.app.avsdatatypes and chr(self.GetCharAt(pos+1)).isspace():
                         self.ColourTo(pos, self.STC_AVS_DATATYPE)
                     elif word in self.app.avskeywords:
                         self.ColourTo(pos, self.STC_AVS_KEYWORD)
@@ -2205,7 +2205,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                                 self.SetFoldLevel(line, level)
                             self.ColourTo(end, self.STC_AVS_ENDCOMMENT)
                             break
-                    elif ch2 == u'(':
+                    elif ch2 == '(':
                         if word in self.avsfilterdict:
                             #~ self.ColourTo(pos, self.keywordstyles[word])
                             self.ColourTo(pos, self.avsfilterdict[word][1])
@@ -2213,7 +2213,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                                 isLoadPlugin = True
                         else:
                             self.ColourTo(pos, self.STC_AVS_UNKNOWNFUNCTION)
-                    elif ch2 == u'=' and unichr(self.GetCharAt(pos2 + 1)) != '=':
+                    elif ch2 == '=' and chr(self.GetCharAt(pos2 + 1)) != '=':
                         if self.GetOpenParenthesesPos(pos - len(word)):
                             self.ColourTo(pos, self.STC_AVS_PARAMETER)
                         else:
@@ -2229,7 +2229,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                     state = self.STC_AVS_DEFAULT
             elif state == self.STC_AVS_STRING:
                 if self.app.options['usestringeol']:
-                    if unichr(self.GetCharAt(pos-1)) in string_delimiters and unichr(self.GetCharAt(pos)) in string_delimiters and unichr(self.GetCharAt(pos+1)) in string_delimiters:
+                    if chr(self.GetCharAt(pos-1)) in string_delimiters and chr(self.GetCharAt(pos)) in string_delimiters and chr(self.GetCharAt(pos+1)) in string_delimiters:
                         state = self.STC_AVS_TRIPLE
                         pos += 1
                     elif ch in string_delimiters or isEOL:
@@ -2246,7 +2246,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                                 isLoadPlugin = False
                         state = self.STC_AVS_DEFAULT
                 else:
-                    if unichr(self.GetCharAt(pos-1)) in string_delimiters and unichr(self.GetCharAt(pos)) in string_delimiters and unichr(self.GetCharAt(pos+1)) in string_delimiters:
+                    if chr(self.GetCharAt(pos-1)) in string_delimiters and chr(self.GetCharAt(pos)) in string_delimiters and chr(self.GetCharAt(pos+1)) in string_delimiters:
                         state = self.STC_AVS_TRIPLE
                         pos += 1
                     elif ch in string_delimiters:
@@ -2266,14 +2266,14 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                 triple_quote_quirk = False
                 if ch == '"' and pos - triple_start == 1:
                     last_quote_pos = pos
-                    while unichr(self.GetCharAt(last_quote_pos)) == '"':
+                    while chr(self.GetCharAt(last_quote_pos)) == '"':
                         last_quote_pos += 1
                     quote_number = last_quote_pos - pos
                     if quote_number > 3:
                         pos += quote_number - 1 - 1
                         triple_quote_quirk = True
                 if not triple_quote_quirk:
-                    if isEOD or ((pos - triple_start > 2) and ch in string_delimiters and unichr(self.GetCharAt(pos-1)) in string_delimiters and unichr(self.GetCharAt(pos-2)) in string_delimiters):
+                    if isEOD or ((pos - triple_start > 2) and ch in string_delimiters and chr(self.GetCharAt(pos-1)) in string_delimiters and chr(self.GetCharAt(pos-2)) in string_delimiters):
                         self.ColourTo(pos, self.STC_AVS_TRIPLE)
                         state = self.STC_AVS_DEFAULT
                         triple_start = None
@@ -2305,7 +2305,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                     hexfragment = []
                     state = self.STC_AVS_DEFAULT
             elif state == self.STC_AVS_USERSLIDER:
-                if isEOL or (ch == ']' and unichr(self.GetCharAt(pos-1)) == '>'):
+                if isEOL or (ch == ']' and chr(self.GetCharAt(pos-1)) == '>'):
                     if isEOL:
                         self.ColourTo(pos, self.STC_AVS_NUMBERBAD)
                     else:
@@ -2320,8 +2320,8 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                     self.SetFoldLevel(line, level)
                 self.ColourTo(end, self.STC_AVS_ENDCOMMENT)
                 break
-            ch = unichr(self.GetCharAt(pos))
-            if pos != start and (ch == unichr(0) or ch == '\n' or ch == '\r'):
+            ch = chr(self.GetCharAt(pos))
+            if pos != start and (ch == chr(0) or ch == '\n' or ch == '\r'):
                 self.UpdateFolding(self.LineFromPosition(pos), flag, prev_flag)
                 prev_flag = flag
                 flag = None
@@ -2536,7 +2536,7 @@ class AvsStyleDialog(wx.Dialog):
             tabPanel.SetSizerAndFit(tabSizer)
         self.notebook.SetSelection(0)
         # Standard (and not standard) buttons
-        themes = [_('Select a predefined theme')] + parent.defaulttextstylesDict.keys()
+        themes = [_('Select a predefined theme')] + list(parent.defaulttextstylesDict.keys())
         theme_choice = wx.Choice(self, choices=themes)
         theme_choice.SetSelection(0)
         self.Bind(wx.EVT_CHOICE, self.OnSelectTheme, theme_choice)
@@ -2664,7 +2664,7 @@ class AvsStyleDialog(wx.Dialog):
         return self.controls2
 
     def UpdateDict(self):
-        for key, value in self.controls.items():
+        for key, value in list(self.controls.items()):
             styleList = []
             fontButton, foreButton, backButton = value
             if fontButton is not None:
@@ -2786,17 +2786,17 @@ class STCPrintout(wx.Printout):
         rect[1] += self.header_height
         rect[3] -= self.header_height
         if self.debuglevel > 0:
-            print  "prepare rect: ", rect
+            print("prepare rect: ", rect)
         while self.start_points[-1] < stc_len:
             self.start_points.append(self.stc.FormatRange(False, 
                                     self.start_points[-1], stc_len,
                                     dc, dc, rect, rect))
             if self.debuglevel > 0:
                 if self.start_points[-1] == stc_len:
-                    print "prepare printing - reached end of document: %d" % stc_len
+                    print("prepare printing - reached end of document: %d" % stc_len)
                 else:
-                    print ("prepare printing - page %d first line: %d" % (
-                           len(self.start_points), self.start_points[-1]))
+                    print(("prepare printing - page %d first line: %d" % (
+                           len(self.start_points), self.start_points[-1])))
         self.stc.SetEdgeMode(edge_mode)
     
     def GetPageInfo(self):
@@ -2848,11 +2848,11 @@ class STCPrintout(wx.Printout):
                                     dc, dc, rect, rect)
         self.stc.SetEdgeMode(edge_mode)
         if self.debuglevel > 0:
-            print  "print rect: ", rect
+            print("print rect: ", rect)
             if next == stc_len:
-                print "printing - reached end of document: %d" % stc_len
+                print("printing - reached end of document: %d" % stc_len)
             else:
-                print "printing - page %d first line: %d" % (page + 1, next)
+                print("printing - page %d first line: %d" % (page + 1, next))
     
     def _drawPageHeader(self, dc, page):
         """Draw the page header into the DC for printing
@@ -3048,7 +3048,7 @@ class ScrapWindow(wx.Dialog):
         try:
             win.PopupMenu(win.contextMenu, pos)
         except AttributeError:
-            print>>sys.stderr, _('Error: no contextMenu variable defined for window')
+            print(_('Error: no contextMenu variable defined for window'), file=sys.stderr)
 
     def OnRefresh(self, event):
         scrap = self.textCtrl
@@ -3126,7 +3126,7 @@ class AsyncCall:
     def Wait(self, timeout=None, failval=None):
         self.complete.wait(timeout)
         if self.exception:
-            raise self.exception[0], self.exception[1], self.exception[2]
+            raise self.exception[0](self.exception[1]).with_traceback(self.exception[2])
         if self.result is self.noresult:
             return failval
         return self.result
@@ -3148,7 +3148,7 @@ def GenerateMacroReadme(file=None):
     '''
     doc = MainFrame.AvsP_functions(MainFrame).__doc__
     if file:
-        if not isinstance(file, basestring):
+        if not isinstance(file, str):
             file = os.path.join('macros', 'macros_readme.txt')
         dir = os.path.dirname(file)
         if not os.path.isdir(dir):
@@ -3307,7 +3307,7 @@ class UserSliderDialog(wx.Dialog):
         )
 
     def GetSliderText(self):
-        textDict = dict([(k, v.GetValue()) for k,v in self.ctrlDict.items()])
+        textDict = dict([(k, v.GetValue()) for k,v in list(self.ctrlDict.items())])
         textDict['open'] = self.parent.sliderOpenString
         textDict['close'] = self.parent.sliderCloseString
         return '%(open)s"%(label)s", %(min)s, %(max)s, %(val)s%(close)s' % textDict
@@ -3347,10 +3347,10 @@ class AvsFunctionDialog(wx.Dialog):
         lowername = functionName.lower()
         if lowername in self.avsfilterdict:
             lowername = self.avsfilterdict[lowername][3] or lowername
-            for index in xrange(self.notebook.GetPageCount()):
+            for index in range(self.notebook.GetPageCount()):
                 panel = self.notebook.GetPage(index)
                 listbox = panel.listbox
-                for i in xrange(listbox.GetCount()):
+                for i in range(listbox.GetCount()):
                     label = listbox.GetString(i)
                     if label.split()[0].lower() == lowername:
                         self.notebook.SetSelection(index)
@@ -3394,7 +3394,7 @@ class AvsFunctionDialog(wx.Dialog):
             (_('Clip properties'), 1),
         )
         pageDict = collections.defaultdict(list)
-        for key in set(self.filterDict.keys()+self.overrideDict.keys()):
+        for key in set(list(self.filterDict.keys())+list(self.overrideDict.keys())):
             name, args, ftype = self.overrideDict.get(key, (None, None, None))
             extra = ' '
             if name is None:
@@ -3428,7 +3428,7 @@ class AvsFunctionDialog(wx.Dialog):
             if choices:
                 listbox.SetSelection(0)
             listbox.Bind(wx.EVT_LISTBOX_DCLICK, lambda event: self.EditFunctionInfo())
-            for i in xrange(listbox.GetCount()):
+            for i in range(listbox.GetCount()):
                 name = listbox.GetString(i).split()[0]
                 if name.lower() not in self.removedSet:
                     listbox.Check(i)
@@ -3709,12 +3709,12 @@ class AvsFunctionDialog(wx.Dialog):
     
     def CheckAllFunctions(self, check=True):
         listbox = self.notebook.GetCurrentPage().listbox
-        for i in xrange(listbox.GetCount()):
+        for i in range(listbox.GetCount()):
             listbox.Check(i, check)
 
     def _x_ClearLongNames(self):
         listbox = self.notebook.GetCurrentPage().listbox
-        for i in xrange(listbox.GetCount()):
+        for i in range(listbox.GetCount()):
             if listbox.GetString(i).count('_') > 0:
                 listbox.Check(i, False)
 
@@ -3726,7 +3726,7 @@ class AvsFunctionDialog(wx.Dialog):
             filters = self.installed_avsi_filternames
         else: return
         listbox = self.notebook.GetCurrentPage().listbox
-        for i in xrange(listbox.GetCount()):
+        for i in range(listbox.GetCount()):
             boolCheck = (listbox.GetString(i).split()[0].lower() in filters)
             listbox.Check(i, boolCheck)
     
@@ -3761,18 +3761,18 @@ class AvsFunctionDialog(wx.Dialog):
                     info = self.ParseCustomizations(filename)
                 elif ext == '.dat':
                     if filename.startswith('http'):
-                        f = urllib2.urlopen(filename)
+                        f = urllib.request.urlopen(filename)
                     else:
                         f = open(filename, 'rb')
-                    data = cPickle.load(f)
+                    data = pickle.load(f)
                     f.close()
                     info = []
-                    for filtername, filterargs, ftype in data['filteroverrides'].values():
+                    for filtername, filterargs, ftype in list(data['filteroverrides'].values()):
                         info.append((filename, filtername, filterargs, ftype))
                 else:
                     info = None
-            except (urllib2.URLError, urllib2.HTTPError), err:
-                wx.MessageBox(u'\n\n'.join((os.path.basename(filename), unicode(err))), 
+            except (urllib.error.URLError, urllib.error.HTTPError) as err:
+                wx.MessageBox('\n\n'.join((os.path.basename(filename), str(err))), 
                               _('Error'), style=wx.OK|wx.ICON_ERROR)
                 continue
             except:
@@ -3791,7 +3791,7 @@ class AvsFunctionDialog(wx.Dialog):
     def SelectImportFilters(self, filterInfo):
         choices = []
         filterInfo.sort(key=lambda fi:
-                    [i.lower() if isinstance(i, basestring) else i for i in fi])
+                    [i.lower() if isinstance(i, str) else i for i in fi])
         for filename, filtername, filterargs, ftype in filterInfo:
             choices.append(os.path.basename(filename) + ' -> ' + filtername)
         dlg = wx.Dialog(self, wx.ID_ANY, _('Select the functions to import'), 
@@ -3822,7 +3822,7 @@ class AvsFunctionDialog(wx.Dialog):
             if id in [idSelectionAll, idSelectionNone]:
                 listbox_range = listbox.GetSelections()
             elif id in [idAll, idNone]:
-                listbox_range = range(len(filterInfo))
+                listbox_range = list(range(len(filterInfo)))
             elif id in [idFileAll, idFileNone]:
                 pos = listbox.GetSelections()
                 if not pos:
@@ -3883,7 +3883,7 @@ class AvsFunctionDialog(wx.Dialog):
     
     def ParseCustomizations(self, filename):
         if filename.startswith('http'):
-            f = urllib2.urlopen(filename)
+            f = urllib.request.urlopen(filename)
         else:
             f = open(filename)
         text = '\n'.join([line.strip() for line in f.readlines()])
@@ -3931,8 +3931,8 @@ class AvsFunctionDialog(wx.Dialog):
                     if len(splitstring) == 2:
                         filtername = splitstring[0].strip()
                         if not self.parent.GetPluginFunctionShortName(filtername.lower()):
-                            print>>sys.stderr, '{0}: {1}'.format(_('Error'), _('Invalid plugin '
-                                'function name "{name}". Must be "pluginname_functionname".').format(name=filtername))
+                            print('{0}: {1}'.format(_('Error'), _('Invalid plugin '
+                                'function name "{name}". Must be "pluginname_functionname".').format(name=filtername)), file=sys.stderr)
                             continue
                         filterargs = '('+splitstring[1].strip(' ')
                         filterInfo.append((filename, filtername, filterargs, 2))
@@ -3981,7 +3981,7 @@ class AvsFunctionDialog(wx.Dialog):
                             #~ if foundindex != wx.NOT_FOUND:
                                 #~ listbox.SetString(foundindex, newName)
                             #~ break
-            for lowername, (name, args, ftype) in self.overrideDict.iteritems():
+            for lowername, (name, args, ftype) in self.overrideDict.items():
                 if ftype == 2 and lowername not in self.filterDict:
                     shortname = self.parent.GetPluginFunctionShortName(lowername)
                     if len(self.shortnamesDict[shortname]) == 1:
@@ -4022,11 +4022,11 @@ class AvsFunctionDialog(wx.Dialog):
         dlg.Destroy()
         
     def RefreshListNames(self):
-        for index in xrange(self.notebook.GetPageCount()):
+        for index in range(self.notebook.GetPageCount()):
             panel = self.notebook.GetPage(index)
             listbox = panel.listbox
             deleteIndices = []
-            for i in xrange(listbox.GetCount()):
+            for i in range(listbox.GetCount()):
                 name = listbox.GetString(i).split()[0]
                 lowername = name.lower()
                 extra = ' '
@@ -4053,7 +4053,7 @@ class AvsFunctionDialog(wx.Dialog):
             else:
                 ftype = 3
         else:
-            for index in xrange(self.notebook.GetPageCount()):
+            for index in range(self.notebook.GetPageCount()):
                 panel = self.notebook.GetPage(index)
                 if panel.functiontype == ftype:
                     self.notebook.SetSelection(index)
@@ -4096,7 +4096,7 @@ class AvsFunctionDialog(wx.Dialog):
             newArgs = dlg.argsBox.GetValue()
             newPreset = dlg.presetBox.GetValue()
             boolAutoPreset = dlg.autopresetCheckbox.GetValue()
-            for index in xrange(self.notebook.GetPageCount()):
+            for index in range(self.notebook.GetPageCount()):
                 panel = self.notebook.GetPage(index)
                 if panel.functiontype == newType:
                     self.notebook.SetSelection(index)
@@ -4135,8 +4135,8 @@ class AvsFunctionDialog(wx.Dialog):
         dlg = self.FilterInfoDialog
         if arg and ftype is not None:
             arg = arg.strip()
-            name = unicode(name)
-            for index in xrange(self.notebook.GetPageCount()):
+            name = str(name)
+            for index in range(self.notebook.GetPageCount()):
                 panel = self.notebook.GetPage(index)
                 if panel.functiontype == ftype:
                     break
@@ -4212,7 +4212,7 @@ class AvsFunctionDialog(wx.Dialog):
                 extra += '~'
             if newType == enteredType:
                 if arg and ftype is not None:
-                    for i in xrange(listbox.GetCount()):
+                    for i in range(listbox.GetCount()):
                         if newName == listbox.GetString(i).split()[0]:
                             listbox.SetSelection(i)
                             break
@@ -4228,7 +4228,7 @@ class AvsFunctionDialog(wx.Dialog):
                         del self.shortnamesDict[shortname]
                     else:
                         self.shortnamesDict[shortname].remove(lowername)
-                for index in xrange(self.notebook.GetPageCount()):
+                for index in range(self.notebook.GetPageCount()):
                     panel = self.notebook.GetPage(index)
                     if panel.functiontype == newType:
                         listindex = listbox.GetSelection()
@@ -4559,17 +4559,17 @@ class AvsFunctionExportImportDialog(wx.Dialog):
         self.functiontypeDict = infoDict[3]
 
         # Create the list control using the dictionary
-        decList = [(s.lower(), s) for s in self.calltipDict.keys()]
+        decList = [(s.lower(), s) for s in list(self.calltipDict.keys())]
         decList.sort()
         self.names = [s[1] for s in decList]
         self.checkListBox = wx.CheckListBox(self, wx.ID_ANY, choices=self.names)
 
         # Create extra control buttons
         def OnButtonSelectAll(event):
-            for index in xrange(len(self.names)):
+            for index in range(len(self.names)):
                 self.checkListBox.Check(index, True)
         def OnButtonClearAll(event):
-            for index in xrange(len(self.names)):
+            for index in range(len(self.names)):
                 self.checkListBox.Check(index, False)
         buttonSelectAll = wx.Button(self, wx.ID_ANY, _('Select all'))
         self.Bind(wx.EVT_BUTTON, OnButtonSelectAll, buttonSelectAll)
@@ -4582,7 +4582,7 @@ class AvsFunctionExportImportDialog(wx.Dialog):
         else:
             staticText = wx.StaticText(self, wx.ID_ANY, _('Select filters to import from the file:'))
             # Import dialog, check all names by default
-            for index in xrange(len(self.names)):
+            for index in range(len(self.names)):
                 self.checkListBox.Check(index)
             # Extra controls to provide options for import information
             #~ self.checkBoxCalltip = wx.CheckBox(self, wx.ID_ANY, _('Calltips'))
@@ -4892,7 +4892,7 @@ class SliderPlus(wx.Panel):
             dc.SetBrush(self.brushGrayText)
         wT = self.wT
         drawnBookmarks = dict()
-        for value, bmtype in self.bookmarks.items():
+        for value, bmtype in list(self.bookmarks.items()):
             if value > self.maxValue or value < self.minValue:
                 continue
             pixelpos = int(value * wB / float(self.maxValue - self.minValue)) + self.xo
@@ -5003,7 +5003,7 @@ class SliderPlus(wx.Panel):
         selectionList = []
         start = stop = None
         #~ selectionmarks = self.bookmarks
-        selectionmarks = [item for item in self.bookmarks.items() if item[1] != 0]
+        selectionmarks = [item for item in list(self.bookmarks.items()) if item[1] != 0]
         selectionmarks.sort()
         if len(selectionmarks) == 0:
             return None
@@ -5053,7 +5053,7 @@ class SliderPlus(wx.Panel):
             if minValue == 0 and (maxValue == -1 or maxValue ==0):
                 maxValue = 1
             else:
-                print>>sys.stderr, _('Error: minValue must be less than maxValue')
+                print(_('Error: minValue must be less than maxValue'), file=sys.stderr)
                 return
         self.minValue = minValue
         self.maxValue = maxValue
@@ -5157,7 +5157,7 @@ class SliderPlus(wx.Panel):
         x, y, w, h = self.GetRect()
         hitlist = []
         wT = self.wT
-        for value, bmtype in self.bookmarks.items():
+        for value, bmtype in list(self.bookmarks.items()):
             pixelpos = int(value * (w-2*self.xo) / float(self.maxValue - self.minValue)) + self.xo
             if bmtype == 0:
                 rect = wx.Rect(pixelpos-wT/4, h-self.yo2, wT/2, wT/2)
@@ -5207,9 +5207,9 @@ class MainFrame(wxp.Frame):
             self.programdir = os.path.dirname(sys.executable)
         else:
             self.programdir = os.path.abspath(os.path.dirname(sys.argv[0]))
-        if type(self.programdir) != unicode:
-            self.programdir = unicode(self.programdir, encoding)
-        self.initialworkdir = os.getcwdu()
+        if type(self.programdir) != str:
+            self.programdir = str(self.programdir, encoding)
+        self.initialworkdir = os.getcwd()
         self.toolsfolder = os.path.join(self.programdir, 'tools')
         sys.path.insert(0, self.toolsfolder)
         self.macrofolder = os.path.join(self.programdir, 'macros')
@@ -5230,7 +5230,7 @@ class MainFrame(wxp.Frame):
         if os.path.isfile(self.macrosfilename):
             try:
                 with open(self.macrosfilename, 'rb') as f:
-                    self.optionsMacros = cPickle.load(f)
+                    self.optionsMacros = pickle.load(f)
             except:
                 self.loaderror.append(os.path.basename(self.macrosfilename))
                 shutil.copy2(self.macrosfilename, 
@@ -5274,8 +5274,8 @@ class MainFrame(wxp.Frame):
                 # Send data to the main instance via socket
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect(('localhost', self.port))
-                pickledstring = StringIO.StringIO()
-                cPickle.dump(sys.argv[1:],pickledstring)
+                pickledstring = io.StringIO()
+                pickle.dump(sys.argv[1:],pickledstring)
                 sock.sendall(pickledstring.getvalue())
                 response = sock.recv(8192)
                 self.Destroy()
@@ -5546,7 +5546,7 @@ class MainFrame(wxp.Frame):
         if not self.options['exitstatus']:
             self.options['exitstatus'] = 1
             f = open(self.optionsfilename, mode='wb')
-            cPickle.dump(self.options, f, protocol=0)
+            pickle.dump(self.options, f, protocol=0)
             f.close()
         if len(sys.argv)>1:
             self.ProcessArguments(sys.argv[1:])
@@ -5655,7 +5655,7 @@ class MainFrame(wxp.Frame):
         
         # Warn if option files are damaged
         if self.loaderror:
-            print>>sys.stderr, '{0}: {1}'.format(_('Error'), _('Damaged {0}. Using default settings.').format(', '.join(self.loaderror)))
+            print('{0}: {1}'.format(_('Error'), _('Damaged {0}. Using default settings.').format(', '.join(self.loaderror))), file=sys.stderr)
         
         # Update the translation file if necessary
         for path, lang in self.getTranslations(return_paths=True):
@@ -5676,7 +5676,7 @@ class MainFrame(wxp.Frame):
                         else:
                             wx.MessageBox(_('%s translation file updated.  No new messages to translate.') 
                                             % i18n.display_name(self.options['lang']), _('Translation updated'))
-                except NameError, err:
+                except NameError as err:
                     pass
             else:
                 wx.MessageBox(_("%s language couldn't be loaded") % i18n.display_name(self.options['lang']), 
@@ -5711,7 +5711,7 @@ class MainFrame(wxp.Frame):
         if os.path.isfile(self.optionsfilename):
             try:
                 with open(self.optionsfilename, mode='rb') as f:
-                    oldOptions = cPickle.load(f)
+                    oldOptions = pickle.load(f)
             except:
                 self.loaderror.append(os.path.basename(self.optionsfilename))
                 shutil.copy2(self.optionsfilename, 
@@ -5759,8 +5759,7 @@ class MainFrame(wxp.Frame):
         mono = ('monospace', 'Courier New')[index]
         mono2 = ('monospace', 'Fixedsys')[index]
         other = ('sans', 'Comic Sans MS')[index]
-        rgb = tuple(map(lambda x: (x+255)/2, 
-                       wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE).Get()))
+        rgb = tuple([(x+255)/2 for x in wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE).Get()])
         solarized_base03 = '#002b36'
         solarized_base02 = '#073642'
         solarized_base01 = '#586e75'
@@ -5950,8 +5949,8 @@ class MainFrame(wxp.Frame):
                 'scrapwindow': 'face:{mono},size:10,fore:{zenburn_normal_fore},back:{zenburn_currentline_back}',
             },
         }
-        for values in self.defaulttextstylesDict.itervalues():
-            for key, value in values.items():
+        for values in self.defaulttextstylesDict.values():
+            for key, value in list(values.items()):
                 values[key] = value.format(**locals_dict)
         textstylesDict = self.defaulttextstylesDict[_('Default')].copy()
         # Create the options dict
@@ -6113,7 +6112,7 @@ class MainFrame(wxp.Frame):
         # Import certain options from older version if necessary
         if oldOptions is not None:
             # Update the new options dictionnary with the old options
-            updateInfo = [(k,v) for k,v in oldOptions.items() if k in self.options]
+            updateInfo = [(k,v) for k,v in list(oldOptions.items()) if k in self.options]
             self.options.update(updateInfo)
             #~ for key in self.options.keys():
                 #~ if key in oldOptions:
@@ -6134,8 +6133,8 @@ class MainFrame(wxp.Frame):
         # Fix recentfiles as necessary???
         try:
             for i, s in enumerate(self.options['recentfiles']):
-                if type(s) != unicode:
-                    self.options['recentfiles'][i] = unicode(s, encoding)
+                if type(s) != str:
+                    self.options['recentfiles'][i] = str(s, encoding)
         except TypeError:
             pass
                 
@@ -6159,8 +6158,8 @@ class MainFrame(wxp.Frame):
         if os.name == 'nt':
             try:
                 # Get the avisynth directory from the registry
-                key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, 'Software\\AviSynth')
-                value = os.path.expandvars(_winreg.EnumValue(key, 0)[1])
+                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 'Software\\AviSynth')
+                value = os.path.expandvars(winreg.EnumValue(key, 0)[1])
                 if os.path.isdir(value):
                     self.defaultavisynthdir = value
                 else:
@@ -6183,8 +6182,8 @@ class MainFrame(wxp.Frame):
                     os.path.join('%avisynthdir%', 'plugins64' if self.x86_64 else 'plugins'))
             try:
                 # Get the plugins directory from the registry (current user, only AviSynth 2.6)
-                key = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\AviSynth')
-                value = os.path.expandvars(_winreg.QueryValueEx(key, 'plugindir2_5')[0])
+                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 'Software\\AviSynth')
+                value = os.path.expandvars(winreg.QueryValueEx(key, 'plugindir2_5')[0])
                 if os.path.isdir(value):
                     self.options['pluginsdir'] = self.ExpandVars(value, False, '%pluginsdir%')
                 else:
@@ -6193,8 +6192,8 @@ class MainFrame(wxp.Frame):
             except WindowsError:
                 try:
                     # Get the plugins directory from the registry (local machine, AviSynth 2.5-2.6)
-                    key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, 'Software\\AviSynth')
-                    value = os.path.expandvars(_winreg.QueryValueEx(key, 'plugindir2_5')[0])
+                    key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 'Software\\AviSynth')
+                    value = os.path.expandvars(winreg.QueryValueEx(key, 'plugindir2_5')[0])
                     if os.path.isdir(value):
                         self.options['pluginsdir'] = self.ExpandVars(value, False, '%pluginsdir%')
                     else:
@@ -6240,9 +6239,9 @@ class MainFrame(wxp.Frame):
                 else:
                     import avisynth
                 break
-            except OSError, err:
+            except OSError as err:
                 if __debug__:
-                    print err
+                    print(err)
                 exception = True
                 if self.options['usealtdir']:
                     if not path_used:
@@ -6398,8 +6397,8 @@ class MainFrame(wxp.Frame):
                                     self.optionsFilters[key] = (filtername, filterargs, 2)
                                     self.plugin_shortnames[short_name].append(key)
                                 else:
-                                    print>>sys.stderr, '{0}: {1}'.format(_('Error'), _('Invalid plugin '
-                                        'function name "{name}". Must be "pluginname_functionname".').format(name=key))
+                                    print('{0}: {1}'.format(_('Error'), _('Invalid plugin '
+                                        'function name "{name}". Must be "pluginname_functionname".').format(name=key)), file=sys.stderr)
                     elif title == 'userfunctions':
                         if not self.options['fdb_userscriptfunctions']:
                             continue
@@ -6431,14 +6430,14 @@ class MainFrame(wxp.Frame):
                     #~ shortname, filterargs, type = value
                     #~ self.options['filteroverrides'][longKey] = (longName, filterargs, type)
                     #~ deleteKeys.append(key)
-        for key, value in self.options['filteroverrides'].items():
+        for key, value in list(self.options['filteroverrides'].items()):
             if key in self.optionsFilters and self.optionsFilters[key] == value:
                 deleteKeys.append(key) 
         for key in deleteKeys:
             del self.options['filteroverrides'][key]        
         # Don't lose edited plugin and user function presets when the plugin/avsi 
         # is removed and the definition was not overrided
-        for key, value in self.options['filterdefaults_presets'].items():
+        for key, value in list(self.options['filterdefaults_presets'].items()):
             if key not in self.optionsFilters:
                 self.options['filteroverrides'][key] = value
         # Define data structures that are used by each script
@@ -6447,7 +6446,7 @@ class MainFrame(wxp.Frame):
 
     def ExportFilterData(self, filterDict, filename, onlylongnames=False):
         order = [1, 4, 0, 2, 3]
-        keysdec = [(order.index(v[2]), k) for k,v in filterDict.items()]
+        keysdec = [(order.index(v[2]), k) for k,v in list(filterDict.items())]
         keysdec.sort()
         lines = []
         typeDict = {
@@ -6497,7 +6496,7 @@ class MainFrame(wxp.Frame):
         self.options['filterdefaults_presets'] = dict(
             [ # plugins and user functions with its preset edited but not the definition
             (lowername, (name, args, ftype)) 
-            for lowername, (name, args, ftype) in self.optionsFilters.items() 
+            for lowername, (name, args, ftype) in list(self.optionsFilters.items()) 
             if lowername in self.options['filterpresets'] and 
                lowername not in self.options['filteroverrides'] and
                ftype in (2, 3)
@@ -6507,11 +6506,11 @@ class MainFrame(wxp.Frame):
         self.avsfilterdict.update(dict(
             [
             (lowername, (args, styleList[ftype], name, None))
-            for lowername,(name,args,ftype) in self.optionsFilters.items()
+            for lowername,(name,args,ftype) in list(self.optionsFilters.items())
             ]
         ))
         overridedict = dict()
-        for lowername, (name, args, ftype) in self.options['filteroverrides'].iteritems():
+        for lowername, (name, args, ftype) in self.options['filteroverrides'].items():
             overridedict[lowername] = args, styleList[ftype], name, None
             if ftype == 2:
                 shortname = self.GetPluginFunctionShortName(lowername)
@@ -6525,7 +6524,7 @@ class MainFrame(wxp.Frame):
         #   4.1 AviSynth lookup order (autoloaded)
         #   4.2 alphabetical (filterdb)
         #   4.3 undefined (added by the user)
-        for shortname, long_name_list in self.plugin_shortnames.items():
+        for shortname, long_name_list in list(self.plugin_shortnames.items()):
             if shortname in self.avsfilterdict and self.avsfilterdict[shortname][1] == styleList[3]:
                 if shortname not in self.options['filterremoved']:
                     continue
@@ -6544,7 +6543,7 @@ class MainFrame(wxp.Frame):
             self.avsfilterdict[shortname] = args, styletype, self.GetPluginFunctionShortName(name), long_name
         # Remove unchecked items from autocompletion, delete long and short names as required
         avsfilterdict_autocomplete = self.avsfilterdict.copy()
-        for lowername, (args, styletype, name, is_short) in self.avsfilterdict.iteritems():
+        for lowername, (args, styletype, name, is_short) in self.avsfilterdict.items():
             if styletype == styleList[2]:
                 if is_short:
                     if self.options['autocompletepluginnames'].get(is_short) == 1:
@@ -6559,7 +6558,7 @@ class MainFrame(wxp.Frame):
         self.avsazdict = self.GetAutocompleteDict(avsfilterdict_autocomplete)
         self.avsazdict_all = self.GetAutocompleteDict(self.avsfilterdict)
         self.avssingleletters = [
-            s for s in (self.avsfilterdict.keys()+self.avskeywords+self.avsmiscwords)
+            s for s in (list(self.avsfilterdict.keys())+self.avskeywords+self.avsmiscwords)
             if (len(s) == 1 and not s.isalnum() and s != '_')
         ]
     
@@ -6645,7 +6644,7 @@ class MainFrame(wxp.Frame):
                 long_name = name
                 pos = long_name.find('_' + short_name)
                 if pos == -1:
-                    print>>sys.stderr, 'Error parsing plugin string at function "%s"\n' % long_name
+                    print('Error parsing plugin string at function "%s"\n' % long_name, file=sys.stderr)
                     break
                 dllname = long_name[:pos]
                 self.installed_plugins.add(dllname)
@@ -6718,25 +6717,25 @@ class MainFrame(wxp.Frame):
                                 typeDict[t[i-1]] # Helps ensure previous arg is valid
                                 argList[-1] += ' [, ...]'
                             except (IndexError, KeyError):
-                                print>>sys.stderr, (
+                                print((
                                     'Error parsing %s plugin parameters: '
-                                    '+ without preceeding argument') % name
+                                    '+ without preceeding argument') % name, file=sys.stderr)
                         else:
                             try:
                                 typeValue = typeDict[c]
                             except KeyError:
-                                print>>sys.stderr, (
+                                print((
                                     'Error parsing %s plugin parameters: '
-                                    'unknown character %s') % (name, repr(c))
+                                    'unknown character %s') % (name, repr(c)), file=sys.stderr)
                                 typeValue = '?'
                             argList.append(typeValue)
                         if namedargname:
                             try:
                                 argList[namedargindex] += ' "{0}"'.format(''.join(namedargname))
                             except IndexError:
-                                print>>sys.stderr, (
+                                print((
                                     'Error parsing %s plugin parameters: '
-                                    '[name] without following argument') % name
+                                    '[name] without following argument') % name, file=sys.stderr)
                                 argList.append(''.join(namedargname))
                             namedargname = []
                 argstring = '(%s)' % (', '.join(argList))
@@ -6799,7 +6798,7 @@ class MainFrame(wxp.Frame):
                                 value = str(eval(value))
                             except:
                                 if not quiet:
-                                    print _('Error'), 'ParseAvisynthScript() try eval(%s)' % value
+                                    print(_('Error'), 'ParseAvisynthScript() try eval(%s)' % value)
                             else:
                                 text += ['=', value]
                                 varnameDict[varname] = value
@@ -7405,7 +7404,7 @@ class MainFrame(wxp.Frame):
             _('Interlaced'): 'Interlaced',
             _('Swap UV'): 'swapuv',
         }
-        reverseMatrixDict = dict([(v,k) for k,v in self.yuv2rgbDict.items()])
+        reverseMatrixDict = dict([(v,k) for k,v in list(self.yuv2rgbDict.items())])
         self.zoomLabelDict = {
             _('25%'): '25',
             _('50%'): '50',
@@ -7416,7 +7415,7 @@ class MainFrame(wxp.Frame):
             _('Fill window'): 'fill',
             _('Fit inside window'): 'fit',
         }
-        reverseZoomLabelDict = dict([(v,k) for k,v in self.zoomLabelDict.items()])
+        reverseZoomLabelDict = dict([(v,k) for k,v in list(self.zoomLabelDict.items())])
         self.flipLabelDict = {
             _('Vertically'): 'flipvertical',
             _('Horizontally'): 'fliphorizontal',
@@ -7428,7 +7427,7 @@ class MainFrame(wxp.Frame):
             _('Light grey'): (191, 191, 191),
             _('White'): (255, 255, 255),
         }
-        self.backgroundColorDict = dict([(v,k) for k,v in self.backgroundLabelDict.items()])
+        self.backgroundColorDict = dict([(v,k) for k,v in list(self.backgroundLabelDict.items())])
         return (
             (_('&File'),
                 (_('New tab'), 'Ctrl+N', self.OnMenuFileNew, _('Create a new tab')),
@@ -7887,7 +7886,7 @@ class MainFrame(wxp.Frame):
             def SetPageText(self, index, text):
                 script = self.GetPage(index)
                 if script.group is not None:
-                    text = u'[{0}] {1}'.format(script.group, text)
+                    text = '[{0}] {1}'.format(script.group, text)
                 if script.GetModify():
                     text = '* ' + text
                 return wx.Notebook.SetPageText(self, index, text)
@@ -7911,7 +7910,7 @@ class MainFrame(wxp.Frame):
                     if script.old_group is not None:
                         text = text[4:]
                     if script.group is not None:
-                        text = u'[{0}] {1}'.format(script.group, text)
+                        text = '[{0}] {1}'.format(script.group, text)
                 modified = script.GetModify()
                 if modified:
                     text = '* ' + text
@@ -8002,7 +8001,7 @@ class MainFrame(wxp.Frame):
             mdc = None
             imageBase = bmpBase.ConvertToImage()
             il = wx.ImageList(w, h)
-            for i in xrange(10):
+            for i in range(10):
                 bmp = wx.BitmapFromImage(imageBase)
                 mdc = wx.MemoryDC()
                 mdc.SelectObject(bmp)
@@ -8248,7 +8247,7 @@ class MainFrame(wxp.Frame):
         buttonAutocrop.running = False
         dlg.Bind(wx.EVT_BUTTON, self.OnCropAutocrop, buttonAutocrop)
         spinAutocrop = wx.SpinCtrl(dlg, wx.ID_ANY, size=(100,-1), 
-            value=u'{0} ({1})'.format(_('Samples'), self.options['autocrop_samples']), 
+            value='{0} ({1})'.format(_('Samples'), self.options['autocrop_samples']), 
             min=1, initial=self.options['autocrop_samples'], 
             style=wx.TE_PROCESS_ENTER|wx.SP_ARROW_KEYS|wx.ALIGN_RIGHT)
         dlg.Bind(wx.EVT_SPINCTRL, self.OnCropAutocropSamples, spinAutocrop)
@@ -8465,7 +8464,7 @@ class MainFrame(wxp.Frame):
             if os.path.isdir(dirname):
                 startfile(dirname)
             else:
-                wx.MessageBox(u'\n\n'.join((_("The script's directory doesn't exist anymore!"), 
+                wx.MessageBox('\n\n'.join((_("The script's directory doesn't exist anymore!"), 
                               dirname)), _('Error'), style=wx.OK|wx.ICON_ERROR)
     
     def OnMenuFileRenameTab(self, index, pos=None):
@@ -8632,7 +8631,7 @@ class MainFrame(wxp.Frame):
         menu = menuItem.GetMenu()
         nMenuItems = menu.GetMenuItemCount()
         pos = None
-        for i in xrange(nMenuItems):
+        for i in range(nMenuItems):
             if menu.FindItemByPosition(i).GetId() == id:
                 pos = i
                 break
@@ -8879,7 +8878,7 @@ class MainFrame(wxp.Frame):
                     return
             # prefer name over value
             while pos >= 0:
-                chr = unichr(script.GetCharAt(pos))
+                chr = chr(script.GetCharAt(pos))
                 if chr == '=':
                     return script.AutocompleteParameterValue()
                 elif not (chr.isspace() or chr == '\\'):
@@ -8973,7 +8972,7 @@ class MainFrame(wxp.Frame):
             curr = event
         else:
             curr = self.GetFrameNumber()
-        bookmarkList = [bookmark for bookmark, bmtype in self.GetBookmarkFrameList().items() if bmtype == 0]
+        bookmarkList = [bookmark for bookmark, bmtype in list(self.GetBookmarkFrameList().items()) if bmtype == 0]
         diffList = [(abs(curr - i), i) for i in self.bookmarkDict if self.bookmarkDict[i]]
         if not diffList:
             return
@@ -8990,20 +8989,20 @@ class MainFrame(wxp.Frame):
         self.DeleteFrameBookmark(bookmark)
             
     def OnMenuVideoBookmarkRestoreHistory(self, event):
-        bookmarkList = [bookmark for bookmark, bmtype in self.GetBookmarkFrameList().items() if bmtype == 0]
-        for bookmark in self.bookmarkDict.keys():
+        bookmarkList = [bookmark for bookmark, bmtype in list(self.GetBookmarkFrameList().items()) if bmtype == 0]
+        for bookmark in list(self.bookmarkDict.keys()):
             if bookmark not in bookmarkList and self.bookmarkDict[bookmark]:
                 self.OnMenuVideoBookmarkMoveTitle(bookmark)
 
     def OnMenuVideoBookmarkClearHistory(self, event=None, start=0, end=None):
-        bookmarkList = [bookmark for bookmark, bmtype in self.GetBookmarkFrameList().items() if bmtype == 0]
-        for bookmark in self.bookmarkDict.keys():
+        bookmarkList = [bookmark for bookmark, bmtype in list(self.GetBookmarkFrameList().items()) if bmtype == 0]
+        for bookmark in list(self.bookmarkDict.keys()):
             if ((bookmark not in bookmarkList or not self.bookmarkDict[bookmark]) and 
                 bookmark >= start and (end is None or bookmark <= end)):
                 del self.bookmarkDict[bookmark]
                 
     def OnMenuVideoBookmarkAutoTitle(self, event):
-        bookmarkList = [bookmark for bookmark, bmtype in self.GetBookmarkFrameList().items() if bmtype == 0]
+        bookmarkList = [bookmark for bookmark, bmtype in list(self.GetBookmarkFrameList().items()) if bmtype == 0]
         bookmarkList.sort()
         for i in range(len(bookmarkList)):
             if bookmarkList[i] not in self.bookmarkDict:
@@ -9018,7 +9017,7 @@ class MainFrame(wxp.Frame):
         bookmarkInfo = []
         historyList = []
         titleList = []
-        bookmarkList = [bookmark for bookmark, bmtype in self.GetBookmarkFrameList().items() if bmtype == 0]
+        bookmarkList = [bookmark for bookmark, bmtype in list(self.GetBookmarkFrameList().items()) if bmtype == 0]
         for bookmark in self.bookmarkDict:
             if bookmark in bookmarkList:
                 titleList.append(bookmark)
@@ -9221,7 +9220,7 @@ class MainFrame(wxp.Frame):
     def OnMenuVideoQuickSaveImage(self, event):
         path = self.SaveImage(silent=True)
         if path:
-            text = _(u'Image saved to "{0}"').format(path)
+            text = _('Image saved to "{0}"').format(path)
             self.GetStatusBar().SetStatusText(text)
     
     def OnMenuVideoCopyImageClipboard(self, event):
@@ -9236,7 +9235,7 @@ class MainFrame(wxp.Frame):
         mdc = wx.MemoryDC()
         mdc.SelectObject(bmp)
         if not script.AVI.DrawFrame(self.currentframenum, mdc):
-            wx.MessageBox(u'\n\n'.join((_('Error requesting frame {number}').format(number=self.currentframenum), 
+            wx.MessageBox('\n\n'.join((_('Error requesting frame {number}').format(number=self.currentframenum), 
                           script.AVI.clip.get_error())), _('Error'), style=wx.OK|wx.ICON_ERROR)
             return False
         bmp_data = wx.BitmapDataObject(bmp)
@@ -9341,7 +9340,7 @@ class MainFrame(wxp.Frame):
                     id = updateMenu.FindItem(label)
                     menuItem = updateMenu.FindItemById(id)
                     if menuItem is None:
-                        print>>sys.stderr, _('Error'), 'OnMenuVideoZoom(): cannot find menu item by id'
+                        print(_('Error'), 'OnMenuVideoZoom(): cannot find menu item by id', file=sys.stderr)
                         return
                     menuItem.Check()
                 else:
@@ -9354,7 +9353,7 @@ class MainFrame(wxp.Frame):
                             id = menu.FindItem(label)
                             menuItem = menu.FindItemById(id)
                             if menuItem is None:
-                                print>>sys.stderr, _('Error'), 'OnMenuVideoZoom(): cannot find menu item by id'
+                                print(_('Error'), 'OnMenuVideoZoom(): cannot find menu item by id', file=sys.stderr)
                                 return
                             menuItem.Check()
                             break
@@ -9365,7 +9364,7 @@ class MainFrame(wxp.Frame):
                     menu = vidmenu.FindItemById(vidmenu.FindItem(_('&Zoom'))).GetSubMenu()
                     menuItem = menu.FindItemById(id)
                 if menuItem is None:
-                    print>>sys.stderr, _('Error'), 'OnMenuVideoZoom(): cannot find menu item by id'
+                    print(_('Error'), 'OnMenuVideoZoom(): cannot find menu item by id', file=sys.stderr)
                     return
                 menuItem.Check()
                 zoomvalue = self.zoomLabelDict[menuItem.GetLabel()]
@@ -9422,7 +9421,7 @@ class MainFrame(wxp.Frame):
             id = updateMenu.FindItem(label)
             menuItem = updateMenu.FindItemById(id)
             if menuItem is None:
-                print>>sys.stderr, _('Error'), 'OnMenuVideoFlip(): cannot find menu item by id'
+                print(_('Error'), 'OnMenuVideoFlip(): cannot find menu item by id', file=sys.stderr)
                 return
             menuItem.Check(value not in self.flip)
         else:
@@ -9430,7 +9429,7 @@ class MainFrame(wxp.Frame):
             menu = vidmenu.FindItemById(vidmenu.FindItem(_('&Flip'))).GetSubMenu()
             menuItem = menu.FindItemById(id)
             if menuItem is None:
-                print>>sys.stderr, _('Error'), 'OnMenuVideoFlip(): cannot find menu item by id'
+                print(_('Error'), 'OnMenuVideoFlip(): cannot find menu item by id', file=sys.stderr)
                 return
             value = self.flipLabelDict[menuItem.GetLabel()]            
             menuItem.Check(value not in self.flip)
@@ -9461,7 +9460,7 @@ class MainFrame(wxp.Frame):
             id = updateMenu.FindItem(label)
             menuItem = updateMenu.FindItemById(id)
             if not menuItem:
-                print>>sys.stderr, _('Error'), 'OnMenuVideoYUV2RGB(): cannot find menu item by id'
+                print(_('Error'), 'OnMenuVideoYUV2RGB(): cannot find menu item by id', file=sys.stderr)
                 return
             if menuItem.GetKind() == wx.ITEM_RADIO:
                 menuItem.Check()
@@ -9472,7 +9471,7 @@ class MainFrame(wxp.Frame):
             menu = vidmenu.FindItemById(vidmenu.FindItem(_('&YUV -> RGB'))).GetSubMenu()
             menuItem = menu.FindItemById(id)
             if menuItem is None:
-                print>>sys.stderr, _('Error'), 'OnMenuVideoYUV2RGB(): cannot find menu item by id'
+                print(_('Error'), 'OnMenuVideoYUV2RGB(): cannot find menu item by id', file=sys.stderr)
                 return
             if menuItem.GetKind() == wx.ITEM_RADIO:
                 menuItem.Check()
@@ -9497,7 +9496,7 @@ class MainFrame(wxp.Frame):
             if AVI:
                 refresh = AVI.IsYUV
         if refresh:
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+            for index in range(self.scriptNotebook.GetPageCount()):
                 script = self.scriptNotebook.GetPage(index)
                 script.display_clip_refresh_needed = True
             if self.previewWindowVisible:
@@ -9528,7 +9527,7 @@ class MainFrame(wxp.Frame):
                     self.bit_depth = 'rgb48'
                 else:
                     self.bit_depth = None
-                for index in xrange(self.scriptNotebook.GetPageCount()):
+                for index in range(self.scriptNotebook.GetPageCount()):
                     script = self.scriptNotebook.GetPage(index)
                     script.display_clip_refresh_needed = True
                 if self.previewWindowVisible:
@@ -9538,7 +9537,7 @@ class MainFrame(wxp.Frame):
         id = updateMenu.FindItem(label)
         menuItem = updateMenu.FindItemById(id)
         if not menuItem:
-            print>>sys.stderr, _('Error'), 'OnMenuVideoBitDepth(): cannot find menu item by id'
+            print(_('Error'), 'OnMenuVideoBitDepth(): cannot find menu item by id', file=sys.stderr)
             return
         menuItem.Check()
     
@@ -9550,7 +9549,7 @@ class MainFrame(wxp.Frame):
         elif color is not None:
             label = self.backgroundColorDict.get(color, _('Custom'))
         elif label is None:
-            print>>sys.stderr, _('Error'), 'OnMenuVideoBackgroundColor(): a color or menuItem label is needed'
+            print(_('Error'), 'OnMenuVideoBackgroundColor(): a color or menuItem label is needed', file=sys.stderr)
         updateMenu = None
         for vidmenu in vidmenus:
             menu = vidmenu.FindItemById(vidmenu.FindItem(_('Background &color'))).GetSubMenu()
@@ -9574,7 +9573,7 @@ class MainFrame(wxp.Frame):
         id = updateMenu.FindItem(label)
         menuItem = updateMenu.FindItemById(id)
         if not menuItem:
-            print>>sys.stderr, _('Error'), 'OnMenuVideoBackgroundColor(): cannot find menu item by id'
+            print(_('Error'), 'OnMenuVideoBackgroundColor(): cannot find menu item by id', file=sys.stderr)
             return
         menuItem.Check()
     
@@ -9589,7 +9588,7 @@ class MainFrame(wxp.Frame):
                 self.colour_data.SetCustomColour(i, data.GetCustomColour(i))
             self.options['colourdata'] = self.colour_data.ToString()
             with open(self.optionsfilename, mode='wb') as f:
-                cPickle.dump(self.options, f, protocol=0)
+                pickle.dump(self.options, f, protocol=0)
         dialog.Destroy()
     
     def OnMenuVideoReuseEnvironment(self, event):
@@ -9603,7 +9602,7 @@ class MainFrame(wxp.Frame):
 
     def OnMenuVideoReleaseMemory(self, event):
         self.HidePreviewWindow()
-        for index in xrange(self.scriptNotebook.GetPageCount()):
+        for index in range(self.scriptNotebook.GetPageCount()):
             script = self.scriptNotebook.GetPage(index)
             script.AVI = None
 
@@ -9654,7 +9653,7 @@ class MainFrame(wxp.Frame):
             error = script.AVI.clip.get_error()
             if error:
                 progress.Destroy()
-                wx.MessageBox(u'\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
+                wx.MessageBox('\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
                               error)), _('Error'), style=wx.OK|wx.ICON_ERROR)
                 return False
             now = time.time()
@@ -9844,7 +9843,7 @@ class MainFrame(wxp.Frame):
         #~ self.SetWindowStyle(style)
         wx.MessageBox(_('You must restart for changes to take effect!'), _('Warning'))
         f = open(self.optionsfilename, mode='wb')
-        cPickle.dump(self.options, f, protocol=0)
+        pickle.dump(self.options, f, protocol=0)
         f.close()
 
     def OnMenuOptionsFilters(self, event):
@@ -9906,8 +9905,8 @@ class MainFrame(wxp.Frame):
             self.options.update(dlg.GetDict2())
             self.options['colourdata'] = self.colour_data.ToString()
             with open(self.optionsfilename, mode='wb') as f:
-                cPickle.dump(self.options, f, protocol=0)
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+                pickle.dump(self.options, f, protocol=0)
+            for index in range(self.scriptNotebook.GetPageCount()):
                 script = self.scriptNotebook.GetPage(index)
                 script.SetUserOptions()
             self.SetMinimumScriptPaneSize()
@@ -9940,7 +9939,7 @@ class MainFrame(wxp.Frame):
         if ID == wx.ID_OK:
             self.options['templates'] = dlg.GetDict()
             with open(self.optionsfilename, mode='wb') as f:
-                cPickle.dump(self.options, f, protocol=0)
+                pickle.dump(self.options, f, protocol=0)
         dlg.Destroy()
 
     def OnMenuOptionsSnippets(self, event):
@@ -9964,7 +9963,7 @@ class MainFrame(wxp.Frame):
         if ID == wx.ID_OK:
             self.options['snippets'] = dlg.GetDict()
             with open(self.optionsfilename, mode='wb') as f:
-                cPickle.dump(self.options, f, protocol=0)
+                pickle.dump(self.options, f, protocol=0)
         dlg.Destroy()
 
     def OnMenuOptionsEnableLineByLineUpdate(self, event):
@@ -10011,7 +10010,7 @@ class MainFrame(wxp.Frame):
         else:
             self.options['usemonospacedfont'] = False
             menuItem.Check(False)
-        for index in xrange(self.scriptNotebook.GetPageCount()):
+        for index in range(self.scriptNotebook.GetPageCount()):
             script = self.scriptNotebook.GetPage(index)
             script.SetTextStyles(self.options['textstyles'], self.options['usemonospacedfont'])
 
@@ -10025,7 +10024,7 @@ class MainFrame(wxp.Frame):
             self.options['paranoiamode'] = False
             menuItem.Check(False)
         f = open(self.optionsfilename, mode='wb')
-        cPickle.dump(self.options, f, protocol=0)
+        pickle.dump(self.options, f, protocol=0)
         f.close()
     
     def OnMenuOptionsAssociate(self, event):
@@ -10035,32 +10034,32 @@ class MainFrame(wxp.Frame):
             ret = wx.MessageBox('%s\n\n%s' % (s1, s2), _('Warning'), wx.YES_NO|wx.ICON_EXCLAMATION)
             if ret == wx.YES:
                 try:
-                    restore = 'avsp' in _winreg.QueryValue(_winreg.HKEY_CLASSES_ROOT, 'avsfile\\shell\\Open\\command').lower()
+                    restore = 'avsp' in winreg.QueryValue(winreg.HKEY_CLASSES_ROOT, 'avsfile\\shell\\Open\\command').lower()
                 except WindowsError:
                     restore = False
                 ret = wx.MessageBox((_('Disassociate avs files for all users?') if restore else _('Associate avs files for all users?')) + 
                                      _(' Admin rights are needed.'), '', wx.YES_NO|wx.CANCEL|wx.ICON_QUESTION)
                 if ret != wx.CANCEL:
                     if hasattr(sys,'frozen'): # run in py2exe binary mode
-                        value = u'"%s" "%%1"' % sys.executable
+                        value = '"%s" "%%1"' % sys.executable
                     else: # run in source mode
                         script = os.path.join(self.programdir, 'run.py')
-                        value = u'"%s" -O "%s" "%%1"' % (sys.executable, script)
+                        value = '"%s" -O "%s" "%%1"' % (sys.executable, script)
                     f = tempfile.NamedTemporaryFile(delete=False)
                     if restore:
-                        txt = textwrap.dedent(u'''\
+                        txt = textwrap.dedent('''\
                         HKCU\\Software\\Classes\\avsfile\\shell\\Open\\command
                         = notepad "%1"
                         HKCU\\Software\\Classes\\avs_auto_file\\shell\\Open\\command
                         = notepad "%1"''')
                         if ret == wx.YES:
-                            txt += textwrap.dedent(u'''
+                            txt += textwrap.dedent('''
                             HKLM\\Software\\Classes\\avsfile\\shell\\Open\\command
                             = notepad "%1"
                             HKLM\\Software\\Classes\\avs_auto_file\\shell\\Open\\command
                             = notepad "%1"''')
                     else:
-                        txt = textwrap.dedent(u'''\
+                        txt = textwrap.dedent('''\
                         HKCU\\Software\\Classes\\avsfile\\shell\\Open\\command
                         = "{value}"
                         HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.avs
@@ -10075,7 +10074,7 @@ class MainFrame(wxp.Frame):
                         HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.avsi\\UserChoice [DELETE]
                         ''').format(value=value)
                         if ret == wx.YES:
-                            txt += textwrap.dedent(u'''
+                            txt += textwrap.dedent('''
                             HKLM\\Software\\Classes\\avsfile\\shell\\Open\\command
                             = "{value}"
                             HKLM\\Software\\Classes\\avs_auto_file\\shell\\Open\\command
@@ -10083,7 +10082,7 @@ class MainFrame(wxp.Frame):
                     f.write(txt.encode('utf16'))
                     f.close()
                     if ret == wx.YES:
-                        ctypes.windll.shell32.ShellExecuteW(None, u'runas', u'cmd', u'/k "regini "{f}" & del "{f}""'.format(f=f.name.decode(encoding)), None, 0)
+                        ctypes.windll.shell32.ShellExecuteW(None, 'runas', 'cmd', '/k "regini "{f}" & del "{f}""'.format(f=f.name.decode(encoding)), None, 0)
                     else:
                         os.system('regini "{f}" & del "{f}"'.format(f=f.name))
         else:
@@ -10152,7 +10151,7 @@ class MainFrame(wxp.Frame):
                     menuItem = self.GetMenuBar().FindItemById(id)
                     label = menuItem.GetLabel()
                     if shortcut != '':
-                        shortcut = u'\t%s\u00a0' % wxp.GetTranslatedShortcut(shortcut)
+                        shortcut = '\t%s\u00a0' % wxp.GetTranslatedShortcut(shortcut)
                         if os.name != 'nt' and wx.version() >= '2.9': # XXX
                             shortcut = shortcut[:-1]
                     newLabel = '%s%s' % (label, shortcut)
@@ -10160,7 +10159,7 @@ class MainFrame(wxp.Frame):
             self.options['shortcuts'] = shortcutList
             self.options['reservedshortcuts'] = reservedShortcuts
             with open(self.optionsfilename, mode='wb') as f:
-                cPickle.dump(self.options, f, protocol=0)
+                pickle.dump(self.options, f, protocol=0)
             self.bindShortcutsToAllWindows()
         dlg.Destroy()
 
@@ -10237,7 +10236,7 @@ class MainFrame(wxp.Frame):
     def OnMenuHelpAbout(self, event):
         prog_name = global_vars.name
         version = self.version
-        arch = u'{0} {1}'.format(platform.system(), 'x86-64' if self.x86_64 else 'x86-32')
+        arch = '{0} {1}'.format(platform.system(), 'x86-64' if self.x86_64 else 'x86-32')
         dlg = wx.Dialog(self, wx.ID_ANY, _('About AvsPmod'), size=(220,180))
         bmp = AvsP_icon.getBitmap()
         logo = wx.StaticBitmap(dlg, wx.ID_ANY, bmp)
@@ -10779,13 +10778,13 @@ class MainFrame(wxp.Frame):
             group = self.currentScript.group
             if group is None:
                 return
-        for index in xrange(self.scriptNotebook.GetPageCount()):
+        for index in range(self.scriptNotebook.GetPageCount()):
             script = self.scriptNotebook.GetPage(index)
             if script.group == group:
                 self.AssignTabGroup(None, index)
     
     def OnGroupClearAllTabGroups(self, event):
-        for index in xrange(self.scriptNotebook.GetPageCount()):
+        for index in range(self.scriptNotebook.GetPageCount()):
             self.AssignTabGroup(None, index)
     
     def OnGroupAssignTabGroup(self, event):
@@ -10978,14 +10977,14 @@ class MainFrame(wxp.Frame):
                 delta = 1
             # Create list of indices to loop through
             index = self.scriptNotebook.GetSelection()
-            r = range(self.scriptNotebook.GetPageCount())
+            r = list(range(self.scriptNotebook.GetPageCount()))
             if delta == 1:
-                for i in xrange(index+1):
+                for i in range(index+1):
                     j = r.pop(0)
                     r.append(j)
             else:
                 r.reverse()
-                for i in xrange(index):
+                for i in range(index):
                     j = r.pop()
                     r.insert(0,j)
             # Loop through r to find next suitable tab
@@ -11211,7 +11210,7 @@ class MainFrame(wxp.Frame):
         # Update the spin control ranges
         w = script.AVI.Width
         h = script.AVI.Height
-        for key in self.cropValues.keys():
+        for key in list(self.cropValues.keys()):
             self.cropValues[key] = self.cropDialog.ctrls[key].GetValue()
         self.cropDialog.ctrls['left'].SetRange(0, w-self.options['cropminx']-self.cropValues['-right'])
         self.cropDialog.ctrls['-right'].SetRange(0, w-self.options['cropminx']-self.cropValues['left'])
@@ -11254,7 +11253,7 @@ class MainFrame(wxp.Frame):
             frames = clip.Framecount
             samples = min(samples, frames)
             if samples <= 2:
-                frames = range(samples)
+                frames = list(range(samples))
             else:
                 def float_range(start=0, end=10, step=1):
                     '''Range with float step'''
@@ -11296,7 +11295,7 @@ class MainFrame(wxp.Frame):
         d = collections.defaultdict(int)
         for i in seq:
             d[i] += 1
-        max = sorted(d.keys(), key=lambda x:-d[x])[0]
+        max = sorted(list(d.keys()), key=lambda x:-d[x])[0]
         if d[max] > len(seq) / 2:
             return max
         else:
@@ -11333,7 +11332,7 @@ class MainFrame(wxp.Frame):
                 wx.TheClipboard.Close()
         # Hide the crop dialog
         self.cropDialog.Hide()
-        for key in self.cropValues.keys():
+        for key in list(self.cropValues.keys()):
             self.cropValues[key] = 0
         # Show the updated video frame
         self.refreshAVI = True
@@ -11341,7 +11340,7 @@ class MainFrame(wxp.Frame):
 
     def OnCropDialogCancel(self, event):
         script = self.currentScript
-        for key in self.cropValues.keys():
+        for key in list(self.cropValues.keys()):
             self.cropValues[key] = 0
         dc = wx.ClientDC(self.videoWindow)
         self.PaintAVIFrame(dc, script, self.currentframenum)
@@ -11369,7 +11368,7 @@ class MainFrame(wxp.Frame):
 
     def OnTrimDialogCancel(self, event):
         # Convert selection bookmarks to regular bookmarks
-        for value, bmtype in self.GetBookmarkFrameList().items():
+        for value, bmtype in list(self.GetBookmarkFrameList().items()):
             if bmtype != 0:
                 if False:
                     self.AddFrameBookmark(value, bmtype=0, toggle=False)
@@ -11383,7 +11382,7 @@ class MainFrame(wxp.Frame):
     # the following 2 func called from wxp.OptionsDialog, not MainFrame
     def x_OnCustomizeAutoCompList(self, event):
         choices = []
-        for keywords in self.avsazdict.values():
+        for keywords in list(self.avsazdict.values()):
             choices += keywords
         choices.sort(key=lambda k: k.lower())
         dlg = wx.Dialog(self, wx.ID_ANY, _('Select autocomplete keywords'), style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER)
@@ -11623,9 +11622,9 @@ class MainFrame(wxp.Frame):
                 ftype = 3
             self.options['filteroverrides'][lowername] = (name, newCalltip, ftype)
             with open(self.optionsfilename, mode='wb') as f:
-                cPickle.dump(self.options, f, protocol=0)
+                pickle.dump(self.options, f, protocol=0)
             self.defineScriptFilterInfo()
-            for i in xrange(self.scriptNotebook.GetPageCount()):
+            for i in range(self.scriptNotebook.GetPageCount()):
                 self.scriptNotebook.GetPage(i).Colourise(0, 0)
         dlg.Destroy()
 
@@ -11671,7 +11670,7 @@ class MainFrame(wxp.Frame):
         if script == self.scriptNotebook.GetCurrentPage():
             index = self.scriptNotebook.GetSelection()
         else:
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+            for index in range(self.scriptNotebook.GetPageCount()):
                 if script == self.scriptNotebook.GetPage(index):
                     break
         title = '* %s' % self.scriptNotebook.GetPageText(index).lstrip('* ')
@@ -11683,7 +11682,7 @@ class MainFrame(wxp.Frame):
         if script == self.scriptNotebook.GetCurrentPage():
             index = self.scriptNotebook.GetSelection()
         else:
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+            for index in range(self.scriptNotebook.GetPageCount()):
                 if script == self.scriptNotebook.GetPage(index):
                     break
         title = self.scriptNotebook.GetPageText(index).lstrip('* ')
@@ -11808,7 +11807,7 @@ class MainFrame(wxp.Frame):
             pass
         # Check if macros are still running
         for thread in threading.enumerate():
-            if thread.name == 'MacroThread':
+            if _thread.name == 'MacroThread':
                 dlg = wx.MessageDialog(self, _('A macro is still running. Close anyway?'),
                                        _('Warning'), wx.OK|wx.CANCEL|wx.ICON_EXCLAMATION)
                 ID = dlg.ShowModal()
@@ -11837,7 +11836,7 @@ class MainFrame(wxp.Frame):
         if self.trimDialog.IsShown():
             self.OnTrimDialogCancel(None)
         if self.options['promptexitsave']:
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+            for index in range(self.scriptNotebook.GetPageCount()):
                 script = self.scriptNotebook.GetPage(index)
                 tabTitle = self.scriptNotebook.GetPageText(index)
                 if script.GetModify():
@@ -11896,15 +11895,15 @@ class MainFrame(wxp.Frame):
         # Save the persistent options
         self.options['exitstatus'] = 0
         f = open(self.optionsfilename, mode='wb')
-        cPickle.dump(self.options, f, protocol=0)
+        pickle.dump(self.options, f, protocol=0)
         f.close()
         if os.path.isdir(os.path.dirname(self.macrosfilename)):
             f = open(self.macrosfilename, mode='wb')
-            cPickle.dump(self.optionsMacros, f, protocol=0)
+            pickle.dump(self.optionsMacros, f, protocol=0)
             f.close()
         # Clean up
         wx.TheClipboard.Flush()
-        for index in xrange(self.scriptNotebook.GetPageCount()):
+        for index in range(self.scriptNotebook.GetPageCount()):
             script = self.scriptNotebook.GetPage(index)
             script.AVI = None
         pyavs.ExitRoutines()
@@ -11935,7 +11934,7 @@ class MainFrame(wxp.Frame):
         if self.options['multilinetab']:
             rows = self.scriptNotebook.GetRowCount()
         iMax = 0
-        re_newfile = re.compile(ur'\*?\s*{0}\s*\((\d+)\)\s*(?:\.avsi?)?$'.format(self.NewFileName), re.I)
+        re_newfile = re.compile(r'\*?\s*{0}\s*\((\d+)\)\s*(?:\.avsi?)?$'.format(self.NewFileName), re.I)
         for i in range(index):
             title = self.scriptNotebook.GetPageText(i)
             match = re_newfile.match(title)
@@ -12008,7 +12007,7 @@ class MainFrame(wxp.Frame):
             default_dir, default_base = (default, '') if os.path.isdir(default) else os.path.split(default)
             initial_dir = default_dir if os.path.isdir(default_dir) else self.GetProposedPath(only='dir')
             #~ filefilter = _('AviSynth script (*.avs, *.avsi)|*.avs;*.avsi|All files (*.*)|*.*')
-            extlist = self.options['templates'].keys()
+            extlist = list(self.options['templates'].keys())
             extlist.sort()
             extlist2 = [s for s in extlist if not s.startswith('avs')]
             extlist1 = ', '.join(extlist2)
@@ -12054,7 +12053,7 @@ class MainFrame(wxp.Frame):
                 if scripttext is None:
                     scripttext, f_encoding, eol = self.GetMarkedScriptFromFile(filename)
                 # If script already exists in a tab, select it
-                for index in xrange(self.scriptNotebook.GetPageCount()):
+                for index in range(self.scriptNotebook.GetPageCount()):
                     script = self.scriptNotebook.GetPage(index)
                     if filename == script.filename:
                         self.SelectTab(index)
@@ -12178,8 +12177,8 @@ class MainFrame(wxp.Frame):
     def UpdateRecentFilesList(self, filename=None):
         # Update the persistent internal list
         if filename is not None:
-            if type(filename) != unicode:
-                filename = unicode(filename, encoding)
+            if type(filename) != str:
+                filename = str(filename, encoding)
             # Add the filename to the internal list
             if not os.path.isfile(filename):
                 return
@@ -12317,7 +12316,7 @@ class MainFrame(wxp.Frame):
         if ID == wx.ID_YES:
             if not self.SaveSession():
                 return
-        for index in xrange(self.scriptNotebook.GetPageCount()):
+        for index in range(self.scriptNotebook.GetPageCount()):
             self.CloseTab(0)
     
     @AsyncCallWrapper
@@ -12533,7 +12532,7 @@ class MainFrame(wxp.Frame):
         noMediaFileList = ('import', 'loadplugin', 'loadcplugin', 'load_stdcall_plugin', 
                            'loadvirtualdubplugin', 'loadvfapiplugin')
         re_templates = re.compile(r'\b(\w+)\s*\([^)]*?\[?\*{3}', re.I)
-        for template in self.options['templates'].values():
+        for template in list(self.options['templates'].values()):
             re_obj = re_templates.search(template)
             if re_obj:
                 function_name = re_obj.group(1).lower() 
@@ -12669,7 +12668,7 @@ class MainFrame(wxp.Frame):
             # Load the session info from filename
             try:
                 with open(filename, mode='rb') as f:
-                    session = cPickle.load(f)
+                    session = pickle.load(f)
             except:
                 return
             if self.options['hidepreview'] or self.options['paranoiamode'] or (startup and self.options['exitstatus']):
@@ -12679,7 +12678,7 @@ class MainFrame(wxp.Frame):
             if backup:
                 session['previewWindowVisible'] = False
                 f = open(filename, mode='wb')
-                cPickle.dump(session, f, protocol=0)
+                pickle.dump(session, f, protocol=0)
                 f.close()
             # Load the text into the tabs
             selectedIndex = None
@@ -12723,7 +12722,7 @@ class MainFrame(wxp.Frame):
                 else:
                     self.SetBookmarkFrameList(session['bookmarks'])
                 if 'bookmarkDict' in session:
-                    self.bookmarkDict.update(session['bookmarkDict'].items())
+                    self.bookmarkDict.update(list(session['bookmarkDict'].items()))
             # Save the recent dir
             if saverecentdir:
                 dirname = os.path.dirname(filename)
@@ -12807,7 +12806,7 @@ class MainFrame(wxp.Frame):
         if filename is not None:
             # Get the text from each script
             scripts = []
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+            for index in range(self.scriptNotebook.GetPageCount()):
                 scripts.append(self.GetTabInfo(index))
             # Get the remaining session information, store in a dict
             session = {}
@@ -12826,7 +12825,7 @@ class MainFrame(wxp.Frame):
             session['bookmarkDict'] = self.bookmarkDict
             # Save info to filename
             f = open(filename, mode='wb')
-            cPickle.dump(session, f, protocol=0)
+            pickle.dump(session, f, protocol=0)
             f.close()
             # Save the recent dir
             if saverecentdir:
@@ -12866,7 +12865,7 @@ class MainFrame(wxp.Frame):
             return
         if frame is None:
             frame = self.currentframenum
-        extlist = self.imageFormats.keys()
+        extlist = list(self.imageFormats.keys())
         extlist.sort()
         if not filename:
             defaultdir, title  = (default, '') if os.path.isdir(default) else os.path.split(default)
@@ -12946,7 +12945,7 @@ class MainFrame(wxp.Frame):
                 mdc.SelectObject(bmp)
                 ret = avs_clip.DrawFrame(frame, mdc)
             if not ret:
-                wx.MessageBox(u'\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
+                wx.MessageBox('\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
                               avs_clip.clip.get_error())), _('Error'), style=wx.OK|wx.ICON_ERROR)
                 return
             #~ bmp.SaveFile(filename, self.imageFormats[ext][1])
@@ -13080,7 +13079,7 @@ class MainFrame(wxp.Frame):
                 data.append(filter_type)
                 scanline = array.array('H', buf[i:i + scanline_size])
                 scanline.byteswap() # network order (big-endian)
-                data.extend(filter(array.array('B', scanline.tostring())))
+                data.extend(list(filter(array.array('B', scanline.tostring()))))
                 if len(data) > chunk_limit:
                     compressed = compressor.compress(data)
                     if len(compressed):
@@ -13134,8 +13133,8 @@ class MainFrame(wxp.Frame):
             #~ txt = str(txt)
         #~ except UnicodeEncodeError:
             #~ txt = unicode(txt, encoding)
-        if type(txt) != unicode:
-            txt = unicode(txt, encoding)
+        if type(txt) != str:
+            txt = str(txt, encoding)
         if pos is None:
             script.ReplaceSelection(txt)
             return True
@@ -13228,7 +13227,7 @@ class MainFrame(wxp.Frame):
         
         '''
         if not filename or not os.path.isfile(filename):
-            extlist = self.options['templates'].keys()
+            extlist = list(self.options['templates'].keys())
             extlist.sort()
             extlist1 = ', '.join(extlist)
             extlist2 = ';*.'.join(extlist)
@@ -13254,9 +13253,9 @@ class MainFrame(wxp.Frame):
             if not strsource:
                 strsource = self.GetPluginString(filename)
                 if not strsource:
-                   strsource = u'DirectShowSource(***)' if os.name == 'nt' else  u'FFVideoSource(***)'
-            strsource = strsource.replace(u'[***]', u'"%s"' % os.path.basename(filename))
-            strsource = strsource.replace(u'***', u'"%s"' % filename)
+                   strsource = 'DirectShowSource(***)' if os.name == 'nt' else  'FFVideoSource(***)'
+            strsource = strsource.replace('[***]', '"%s"' % os.path.basename(filename))
+            strsource = strsource.replace('***', '"%s"' % filename)
         else:
             strsource = ''
         if return_filename:
@@ -13363,14 +13362,14 @@ class MainFrame(wxp.Frame):
         if insertMode in (0,1):
             self.refreshAVI = True
             # Kill all bookmarks (rebuild non-selection bookmarks...)
-            bookmarks = [value for value, bmtype in self.GetBookmarkFrameList().items() if bmtype ==0]
+            bookmarks = [value for value, bmtype in list(self.GetBookmarkFrameList().items()) if bmtype ==0]
             newbookmarks = bookmarks[:]
             self.DeleteAllFrameBookmarks(refreshVideo=False)
             gapframes = 0
             framenum = self.GetFrameNumber()
             newframenum = framenum
             nSelections = len(selections)
-            for i in xrange(nSelections):
+            for i in range(nSelections):
                 # Get the current and previous selection endpoints
                 if i == 0:
                     a, b = selections[0]
@@ -13395,7 +13394,7 @@ class MainFrame(wxp.Frame):
                     else:
                         newframenum = 0
                 # Update the old bookmarks
-                for j in xrange(len(bookmarks)):
+                for j in range(len(bookmarks)):
                     if bookmarks[j] <= d and bookmarks[j] > b:
                         if bookmarks[j] >= c:
                             newbookmarks[j] -= gapframes
@@ -13417,7 +13416,7 @@ class MainFrame(wxp.Frame):
             invertedselections = []
             nSelections = len(selections)
             lastframe = script.AVI.Framecount - 1
-            for i in xrange(nSelections):
+            for i in range(nSelections):
                 if i == 0:
                     a, b = selections[0]
                     c, d = selections[0]
@@ -13464,7 +13463,7 @@ class MainFrame(wxp.Frame):
         nPairs = nBookmarks/2
         lastframe = script.AVI.Framecount - 1
         txt = 'Trim(0, '
-        for i in xrange(nPairs):
+        for i in range(nPairs):
             iA = i * 2
             iB = iA + 1
             lastA = max(bookmarks[iA] - 1, 0)
@@ -13478,7 +13477,7 @@ class MainFrame(wxp.Frame):
             # Determine appropriate frame to show
             framenum = self.GetFrameNumber()
             newframenum = framenum
-            for i in xrange(nPairs):
+            for i in range(nPairs):
                 a = bookmarks[i * 2]
                 b = bookmarks[i * 2+1]
                 if framenum < a:
@@ -13569,7 +13568,7 @@ class MainFrame(wxp.Frame):
                 while script.GetLine(line).strip()[-1] == '\\' and line < lastline:
                     line += 1
                 pos = script.GetLineEndPosition(line)
-                while unichr(script.GetCharAt(pos-1)).strip() == '' or script.GetStyleAt(pos-1) in script.nonBraceStyles:
+                while chr(script.GetCharAt(pos-1)).strip() == '' or script.GetStyleAt(pos-1) in script.nonBraceStyles:
                     pos -= 1
                 script.GotoPos(pos)
                 script.ReplaceSelection('.%s' % txt)
@@ -13616,7 +13615,7 @@ class MainFrame(wxp.Frame):
                 #~ bmList = self.GetBookmarkFrameList()
                 bookmarks = slider.GetBookmarks()
                 lastindex = len(bookmarks) - 1
-                bm = [(value, bmType) for (value, bmType) in bookmarks.items() 
+                bm = [(value, bmType) for (value, bmType) in list(bookmarks.items()) 
                       if bmtype == bmType and value >= start and (end is None or value <= end)]
                 if not bm:
                     return
@@ -13676,7 +13675,7 @@ class MainFrame(wxp.Frame):
         if not offset:
             return
         bookmarkList = [frame + offset for frame, bmtype in 
-                         self.GetBookmarkFrameList().iteritems() if bmtype == 0]
+                         self.GetBookmarkFrameList().items() if bmtype == 0]
         self.DeleteAllFrameBookmarks(bmtype=0)
         self.MacroSetBookmark(frame for frame in bookmarkList if frame >= 0)
     
@@ -13689,7 +13688,7 @@ class MainFrame(wxp.Frame):
     def UpdateBookmarkMenu(self, event=None):
         #~ bookmarks = [bookmark for bookmark, bmtype in self.GetBookmarkFrameList()]
         #~ nBookmarks = len(bookmarks)
-        for i in xrange(self.menuBookmark.GetMenuItemCount()-4):
+        for i in range(self.menuBookmark.GetMenuItemCount()-4):
             self.menuBookmark.DestroyItem(self.menuBookmark.FindItemByPosition(0))
         pos = 0
         bookmarkList = list(self.GetBookmarkFrameList().items())
@@ -13823,7 +13822,7 @@ class MainFrame(wxp.Frame):
         
         # Get a dictionary {frame range: bookmarks in that range}
         range_bm_dict = collections.defaultdict(list)
-        for frame, bmtype in self.GetBookmarkFrameList().iteritems():
+        for frame, bmtype in self.GetBookmarkFrameList().items():
             if bmtype != 0:
                 continue
             for i, (start, end) in enumerate(new_timeline):
@@ -14310,9 +14309,9 @@ class MainFrame(wxp.Frame):
             self.options['autocompletepluginnames'] = dlg.GetAutocompletePluginNames()
             self.plugin_shortnames = dlg.GetPluginShortNames()
             with open(self.optionsfilename, mode='wb') as f:
-                cPickle.dump(self.options, f, protocol=0)
+                pickle.dump(self.options, f, protocol=0)
             self.defineScriptFilterInfo()
-            for i in xrange(self.scriptNotebook.GetPageCount()):
+            for i in range(self.scriptNotebook.GetPageCount()):
                 self.scriptNotebook.GetPage(i).Colourise(0, 0) # set script.GetEndStyled() to 0
         dlg.Destroy()
 
@@ -14339,7 +14338,7 @@ class MainFrame(wxp.Frame):
         if ID == wx.ID_OK:
             self.optionsFilters, self.optionsFilterPresets, self.optionsFilterDocpaths, self.optionsFilterTypes, self.optionsKeywordLists = dlg.GetDict()
             self.options['lasthelpdir'] = dlg.GetLastDirectory()
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+            for index in range(self.scriptNotebook.GetPageCount()):
                 script = self.scriptNotebook.GetPage(index)
                 script.DefineKeywordCalltipInfo(self.optionsFilters, self.optionsFilterPresets, self.optionsFilterDocpaths, self.optionsFilterTypes, self.optionsKeywordLists)
         dlg.Destroy()
@@ -14366,17 +14365,17 @@ class MainFrame(wxp.Frame):
                 if ext == '.tag':
                     f = open(filename, mode='rb')
                     try:
-                        tempDict = cPickle.load(f)
+                        tempDict = pickle.load(f)
                         f.close()
-                    except cPickle.UnpicklingError:
+                    except pickle.UnpicklingError:
                         wx.MessageBox(_('Invalid filter customization file!'), _('Error'), style=wx.OK|wx.ICON_ERROR)
                         f.close()
                         dlg2.Destroy()
                         return
-                    optionsFilters = dict([(k,v[0]) for k,v in tempDict.items()])
-                    optionsFilterPresets = dict([(k,v[1]) for k,v in tempDict.items()])
-                    optionsFilterDocpaths = dict([(k,v[2]) for k,v in tempDict.items()])
-                    optionsFilterTypes = dict([(k,v[3]) for k,v in tempDict.items()])
+                    optionsFilters = dict([(k,v[0]) for k,v in list(tempDict.items())])
+                    optionsFilterPresets = dict([(k,v[1]) for k,v in list(tempDict.items())])
+                    optionsFilterDocpaths = dict([(k,v[2]) for k,v in list(tempDict.items())])
+                    optionsFilterTypes = dict([(k,v[3]) for k,v in list(tempDict.items())])
                 elif ext == '.txt':
                     f = open(filename, mode='r')
                     text = f.read()
@@ -14387,9 +14386,9 @@ class MainFrame(wxp.Frame):
                         splitstring = s.split('(', 1)
                         if len(splitstring) == 2:
                             optionsFilters[splitstring[0].strip()] = '('+splitstring[1].strip(' ')
-                    optionsFilterPresets = dict([(k,None) for k in optionsFilters.keys()])
-                    optionsFilterDocpaths = dict([(k,None) for k in optionsFilters.keys()])
-                    optionsFilterTypes = dict([(k,None) for k in optionsFilters.keys()])
+                    optionsFilterPresets = dict([(k,None) for k in list(optionsFilters.keys())])
+                    optionsFilterDocpaths = dict([(k,None) for k in list(optionsFilters.keys())])
+                    optionsFilterTypes = dict([(k,None) for k in list(optionsFilters.keys())])
                 infoDict = (optionsFilters, optionsFilterPresets, optionsFilterDocpaths, optionsFilterTypes)
             else:
                 dlg2.Destroy()
@@ -14418,10 +14417,10 @@ class MainFrame(wxp.Frame):
                     ext = os.path.splitext(filename)[1]
                     if ext == '.tag':
                         f = open(filename, mode='wb')
-                        cPickle.dump(dataDict, f, protocol=0)
+                        pickle.dump(dataDict, f, protocol=0)
                         f.close()
                     elif ext == '.txt':
-                        keys = dataDict.keys()
+                        keys = list(dataDict.keys())
                         keys.sort()
                         textlines = []
                         for key in keys:
@@ -14445,17 +14444,17 @@ class MainFrame(wxp.Frame):
         if type(filterInfo) != dict:
             wx.MessageBox(_('Invalid argument!'), _('Error'), style=wx.OK|wx.ICON_ERROR)
             return
-        for value in filterInfo.values():
+        for value in list(filterInfo.values()):
             if len(value) != 4:
                 wx.MessageBox(_('Invalid argument!'), _('Error'), style=wx.OK|wx.ICON_ERROR)
                 return
         # Create filter info data structure to iterate upon
         a, b, c, d = self.optionsFilters, self.optionsFilterPresets, self.optionsFilterDocpaths, self.optionsFilterTypes
-        filterDataDict = dict([(key, (a[key], b[key], c[key], d[key])) for key in self.optionsFilters.keys()])
-        filterDataDictKeys = filterDataDict.keys()
+        filterDataDict = dict([(key, (a[key], b[key], c[key], d[key])) for key in list(self.optionsFilters.keys())])
+        filterDataDictKeys = list(filterDataDict.keys())
         filterDataDictKeysLower = [s.lower() for s in filterDataDictKeys]
         # Update the filter information
-        for key, value in filterInfo.items():
+        for key, value in list(filterInfo.items()):
             newCalltip, newPreset, newDocpath, newFilterType = value
             # Wrap the newCalltip as necessary
             if wrapCalltip:
@@ -14485,18 +14484,18 @@ class MainFrame(wxp.Frame):
                     filterDataDict[oldkey] = newValue
             except ValueError:
                 # Key does not exist, add the new info
-                for i in xrange(len(newValue)):
+                for i in range(len(newValue)):
                     if newValue[i] is None:
                         newValue[i] = ''
                         if i == 3:
                             newValue[i] = 0
                 filterDataDict[key] = newValue
-        self.optionsFilters = dict([(key, value[0]) for key, value in filterDataDict.items()])
-        self.optionsFilterPresets = dict([(key, value[1]) for key, value in filterDataDict.items()])
-        self.optionsFilterDocpaths = dict([(key, value[2]) for key, value in filterDataDict.items()])
-        self.optionsFilterTypes = dict([(key, value[3]) for key, value in filterDataDict.items()])
+        self.optionsFilters = dict([(key, value[0]) for key, value in list(filterDataDict.items())])
+        self.optionsFilterPresets = dict([(key, value[1]) for key, value in list(filterDataDict.items())])
+        self.optionsFilterDocpaths = dict([(key, value[2]) for key, value in list(filterDataDict.items())])
+        self.optionsFilterTypes = dict([(key, value[3]) for key, value in list(filterDataDict.items())])
         # Update the open scripts to reflect filter info changes
-        for index in xrange(self.scriptNotebook.GetPageCount()):
+        for index in range(self.scriptNotebook.GetPageCount()):
             script = self.scriptNotebook.GetPage(index)
             script.DefineKeywordCalltipInfo(self.optionsFilters, self.optionsFilterPresets, self.optionsFilterDocpaths, self.optionsFilterTypes, self.optionsKeywordLists)
     
@@ -14631,7 +14630,7 @@ class MainFrame(wxp.Frame):
         error = script.AVI.display_clip.get_error()
         if error is not None:
             self.HidePreviewWindow()
-            wx.MessageBox(u'\n\n'.join((_('Error requesting frame {number}').format(number=framenum), 
+            wx.MessageBox('\n\n'.join((_('Error requesting frame {number}').format(number=framenum), 
                           error)), _('Error'), style=wx.OK|wx.ICON_ERROR)
             return False
         
@@ -14967,10 +14966,10 @@ class MainFrame(wxp.Frame):
         current_frame = self.GetFrameNumber()
         clip = self.currentScript.AVI
         if clip is not None:
-            bookmarkValues = [value for value in self.GetBookmarkFrameList().keys() 
+            bookmarkValues = [value for value in list(self.GetBookmarkFrameList().keys()) 
                               if value < clip.Framecount]
         else:
-            bookmarkValues = [value for value in self.GetBookmarkFrameList().keys()]
+            bookmarkValues = [value for value in list(self.GetBookmarkFrameList().keys())]
         bookmarkValues.sort()
         if len(bookmarkValues) == 0:
             return
@@ -14995,7 +14994,7 @@ class MainFrame(wxp.Frame):
             index = self.scriptNotebook.GetSelection()
         else:
             index = 0
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+            for index in range(self.scriptNotebook.GetPageCount()):
                 if script == self.scriptNotebook.GetPage(index):
                     break
         updateDisplayClip = False
@@ -15250,7 +15249,7 @@ class MainFrame(wxp.Frame):
             try:
                 with open(previewname, 'wb') as f:
                     f.write(txt)
-            except IOError, err: # errno 13 -> permission denied
+            except IOError as err: # errno 13 -> permission denied
                 if err.errno != 13 or altdir_tried:
                     raise
                 dirname = self.programdir
@@ -15301,7 +15300,7 @@ class MainFrame(wxp.Frame):
     def PaintAVIFrame(self, inputdc, script, frame, shift=True, isPaintEvent=False):
         if script.AVI is None:
             if __debug__:
-                print>>sys.stderr, 'Error in PaintAVIFrame: script is None'
+                print('Error in PaintAVIFrame: script is None', file=sys.stderr)
             return
         if self.zoomwindow or self.zoomfactor != 1 or self.flip:
             try: # DoPrepareDC causes NameError in wx2.9.1 and fixed in wx2.9.2
@@ -15325,7 +15324,7 @@ class MainFrame(wxp.Frame):
                 bmp = wx.EmptyBitmap(w,h)
                 dc.SelectObject(bmp)
                 if not script.AVI.DrawFrame(frame, dc):
-                    wx.MessageBox(u'\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
+                    wx.MessageBox('\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
                                   script.AVI.clip.get_error())), _('Error'), style=wx.OK|wx.ICON_ERROR)
                     return
                 self.PaintCropRectangles(dc, script)
@@ -15342,7 +15341,7 @@ class MainFrame(wxp.Frame):
                 except:
                     self.videoWindow.PrepareDC(dc)
                 if not script.AVI.DrawFrame(frame, dc):
-                    wx.MessageBox(u'\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
+                    wx.MessageBox('\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
                                   script.AVI.clip.get_error())), _('Error'), style=wx.OK|wx.ICON_ERROR)
                     return
         else:
@@ -15355,7 +15354,7 @@ class MainFrame(wxp.Frame):
                 bmp = wx.EmptyBitmap(w,h)
                 dc.SelectObject(bmp)
                 if not script.AVI.DrawFrame(frame, dc):
-                    wx.MessageBox(u'\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
+                    wx.MessageBox('\n\n'.join((_('Error requesting frame {number}').format(number=frame), 
                                   script.AVI.clip.get_error())), _('Error'), style=wx.OK|wx.ICON_ERROR)
                     return
                 if self.flip:
@@ -15497,7 +15496,7 @@ class MainFrame(wxp.Frame):
                         frame = self.currentframenum
                         increment = 1
                     if debug_stats:
-                        print debug_stats_str
+                        print(debug_stats_str)
                     if not AsyncCall(self.ShowVideoFrame, frame + increment, 
                                      check_playing=True, focus=False).Wait():
                         return
@@ -15536,9 +15535,9 @@ class MainFrame(wxp.Frame):
                     self.play_initial_frame = self.currentframenum
                     self.play_initial_time = time.time()
                     if debug_stats:
-                        print 'speed_factor: {0}, required_interval: {1} '\
+                        print('speed_factor: {0}, required_interval: {1} '\
                               'interval: {2} interval_factor: {3}'.format(
-                              self.play_speed_factor, interval0, interval, factor)
+                              self.play_speed_factor, interval0, interval, factor))
                         self.increment = 0
                         self.previous_time = self.play_initial_time
                     self.play_timer_id = self.timeSetEvent(interval, 
@@ -15628,7 +15627,7 @@ class MainFrame(wxp.Frame):
                             frame = self.parent.currentframenum
                             increment = 1
                         if debug_stats:
-                            print debug_stats_str
+                            print(debug_stats_str)
                         if not self.parent.ShowVideoFrame(frame + increment, 
                                                           check_playing=True, focus=False):
                             return
@@ -15642,9 +15641,9 @@ class MainFrame(wxp.Frame):
                 interval = int(round(interval * factor))
                 self.play_timer = RunVideoTimer(self, factor)
                 if debug_stats:
-                    print 'speed_factor: {0}, required_interval: {1} '\
+                    print('speed_factor: {0}, required_interval: {1} '\
                           'interval: {2} interval_factor: {3}'.format(
-                          self.play_speed_factor, interval0, interval, factor)
+                          self.play_speed_factor, interval0, interval, factor))
                 self.play_timer.Start(interval)
     
     def RunExternalPlayer(self, path=None, script=None, args=None, prompt=True):
@@ -16213,7 +16212,7 @@ class MainFrame(wxp.Frame):
                 return False
         if parseonly:
             parsedInfo = [arg[1:] for arg in argsList]
-            return zip(sliderTexts, parsedInfo)
+            return list(zip(sliderTexts, parsedInfo))
         # Create the new sliders
         script.sliderSizer.Clear(deleteWindows=True)
         for row, args in enumerate(argsList):
@@ -16678,7 +16677,7 @@ class MainFrame(wxp.Frame):
         def OnSelectColour(event):
             self.options['colourdata'] = self.colour_data.ToString()
             with open(self.optionsfilename, mode='wb') as f:
-                cPickle.dump(self.options, f, protocol=0)
+                pickle.dump(self.options, f, protocol=0)
             strColor = '$%02x%02x%02x' % colorButton.GetColour().Get()
             self.SetNewAvsValue(colorButton, strColor.upper())
         colorButton.Bind(colourselect.EVT_COLOURSELECT, OnSelectColour)
@@ -16780,7 +16779,7 @@ class MainFrame(wxp.Frame):
                 initial_dir = dirname
             else:
                 initial_dir = self.GetProposedPath(only='dir')
-            extlist = self.options['templates'].keys()
+            extlist = list(self.options['templates'].keys())
             extlist.sort()
             extlist2 = [s for s in extlist if not s.startswith('avs')]
             extlist1 = ', '.join(extlist2)
@@ -16926,7 +16925,7 @@ class MainFrame(wxp.Frame):
         if posEnd == -1:
             return (None, None, None)
         argIndex = slider.argIndex
-        for i in xrange(argIndex):
+        for i in range(argIndex):
             endwordpos = script.GetNextValidCommaPos(endwordpos+1)
             if endwordpos is None:
                 return (None, None, None)
@@ -16940,14 +16939,14 @@ class MainFrame(wxp.Frame):
             posA = posEqualSign+1
         pos = posA
         while pos < posB:
-            c = unichr(script.GetCharAt(pos))
+            c = chr(script.GetCharAt(pos))
             if c.strip() and c != '\\':
                 posA = pos
                 break
             pos += 1
         pos = posB
         while pos > posA:
-            c = unichr(script.GetCharAt(pos-1))
+            c = chr(script.GetCharAt(pos-1))
             if c.strip() and c != '\\':
                 posB = pos
                 break
@@ -17043,7 +17042,7 @@ class MainFrame(wxp.Frame):
             self.scriptNotebook.SetPageText(index, name)
             self.UpdateProgramTitle()
         else:
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+            for index in range(self.scriptNotebook.GetPageCount()):
                 if script == self.scriptNotebook.GetPage(index):
                     self.scriptNotebook.SetPageText(index, name)
                     return
@@ -17059,7 +17058,7 @@ class MainFrame(wxp.Frame):
             self.scriptNotebook.UpdatePageText(index)
             self.UpdateProgramTitle()
         else:
-            for index in xrange(self.scriptNotebook.GetPageCount()):
+            for index in range(self.scriptNotebook.GetPageCount()):
                 if script == self.scriptNotebook.GetPage(index):
                     self.scriptNotebook.UpdatePageText(index)
                     return
@@ -17078,7 +17077,7 @@ class MainFrame(wxp.Frame):
         if allowfull and filename:
             tabname = filename
             if script.group is not None:
-                tabname = u'[{0}] {1}'.format(script.group, tabname)
+                tabname = '[{0}] {1}'.format(script.group, tabname)
             if script.GetModify():
                 tabname = '* ' + tabname
         else:
@@ -17091,11 +17090,11 @@ class MainFrame(wxp.Frame):
             if self.options['multilinetab']:
                 rows = self.scriptNotebook.GetRowCount()
             if self.FindFocus() == self.videoWindow:
-                for i in xrange(min(self.scriptNotebook.GetPageCount(), 10)):
+                for i in range(min(self.scriptNotebook.GetPageCount(), 10)):
                     self.scriptNotebook.SetPageImage(i, i)
             else:
                 #~ il = self.scriptNotebook.GetImageList()
-                for i in xrange(self.scriptNotebook.GetPageCount()):
+                for i in range(self.scriptNotebook.GetPageCount()):
                     self.scriptNotebook.SetPageImage(i, -1)
             if self.options['multilinetab']:
                 if rows != self.scriptNotebook.GetRowCount():
@@ -17149,12 +17148,12 @@ class MainFrame(wxp.Frame):
                 self.options[key] = self.ExpandVars(self.options[key], False, '%' + key + '%')
             self.options['colourdata'] = self.colour_data.ToString()
             with open(self.optionsfilename, mode='wb') as f:
-                cPickle.dump(self.options, f, protocol=0)
+                pickle.dump(self.options, f, protocol=0)
             if self.options['useworkdir'] and self.options['workdir']:
                 os.chdir(self.ExpandVars(self.options['workdir']))
             else:
                 os.chdir(self.initialworkdir)
-            for i in xrange(self.scriptNotebook.GetPageCount()):
+            for i in range(self.scriptNotebook.GetPageCount()):
                 script = self.scriptNotebook.GetPage(i)
                 if (self.options['syntaxhighlight_preferfunctions'] != old_prefer_functions or 
                     self.options['syntaxhighlight_styleinsidetriplequotes'] != old_style_triple_quotes):
@@ -17200,7 +17199,7 @@ class MainFrame(wxp.Frame):
             ret = wx.MessageBox('%s\n\n%s' % (s1, s2), _('Warning'), wx.YES_NO|wx.ICON_EXCLAMATION)
             if ret == wx.YES:
                 f = tempfile.NamedTemporaryFile(delete=False)
-                txt = textwrap.dedent(u'''\
+                txt = textwrap.dedent('''\
                 HKCU\\Software\\Avisynth
                 'plugindir2_5'= DELETE
                 HKLM\\Software\\Avisynth
@@ -17208,8 +17207,8 @@ class MainFrame(wxp.Frame):
                 ''').format(dir=pluginsdir_exp)
                 f.write(txt.encode('utf16'))
                 f.close()
-                if ctypes.windll.shell32.ShellExecuteW(None, u'runas', u'cmd', 
-                        u'/k "regini "{f}" & del "{f}""'.format(f=f.name), None, 0) > 32:
+                if ctypes.windll.shell32.ShellExecuteW(None, 'runas', 'cmd', 
+                        '/k "regini "{f}" & del "{f}""'.format(f=f.name), None, 0) > 32:
                     return
             self.options['pluginsdir'] = oldpluginsdirectory
         else:
@@ -17226,7 +17225,7 @@ class MainFrame(wxp.Frame):
                                ).format(rc)
                     ret = wx.MessageBox(warning, _('Warning'), wx.YES_NO|wx.ICON_EXCLAMATION)
                     if ret == wx.YES:
-                        export = u'export AVXSYNTH_RUNTIME_PLUGIN_PATH="{0}"'.format(pluginsdir_exp)
+                        export = 'export AVXSYNTH_RUNTIME_PLUGIN_PATH="{0}"'.format(pluginsdir_exp)
                         with open(rc, 'r+') as f:
                             lines = f.readlines()
                             for i, line in enumerate(lines):
@@ -17262,7 +17261,7 @@ class MainFrame(wxp.Frame):
             index = 1, 0
             if '%altdir%' in blacklist:
                 blacklist.append('%avisynthdir%')
-        vars_ = filter(lambda x:x[0] not in blacklist, vars_)
+        vars_ = [x for x in vars_ if x[0] not in blacklist]
         for var in [var for var in vars_ if var[1]]:
             text = text.replace(var[index[0]], var[index[1]])
         return text
@@ -17572,7 +17571,7 @@ class MainFrame(wxp.Frame):
         '''
         # Get the desired script
         script, index = self.getScriptAtIndex(index)
-        if script is None or not isinstance(txt, basestring):
+        if script is None or not isinstance(txt, str):
             return False
         # Replace the script's text
         script.SetText(txt)
@@ -17623,7 +17622,7 @@ class MainFrame(wxp.Frame):
         default_dir, default_base = (default, '') if os.path.isdir(default) else os.path.split(default)
         initial_dir = default_dir if os.path.isdir(default_dir) else self.GetProposedPath(only='dir')
         if filefilter is None:
-            extlist = self.options['templates'].keys()
+            extlist = list(self.options['templates'].keys())
             extlist.sort()
             extlist1 = ', '.join(extlist)
             extlist2 = ';*.'.join(extlist)
@@ -17790,7 +17789,7 @@ class MainFrame(wxp.Frame):
             eachTypeLine +=  [''] * (lineLen - len(eachTypeLine))
             rowOptions = []
             for eachMessage, eachDefault, eachType in zip(eachMessageLine, eachDefaultLine, eachTypeLine):
-                if not isinstance(eachDefault, collections.Sequence) or isinstance(eachDefault, basestring):
+                if not isinstance(eachDefault, collections.Sequence) or isinstance(eachDefault, str):
                     eachDefault = (eachDefault,)
 
                 #  Set 'optionsDlgInfo' and 'options' from the kind of more user friendly 'message', 'default' and 'types'
@@ -17844,7 +17843,7 @@ class MainFrame(wxp.Frame):
                                 expand=True)
                     params = ('min_val', 'max_val', 'digits', 'increment')
                     for i, param in enumerate(eachDefault[1:]):
-                        if isinstance(param, basestring):
+                        if isinstance(param, str):
                             try:
                                 misc[params[i]] = int(param)
                             except:
@@ -17902,7 +17901,7 @@ class MainFrame(wxp.Frame):
         values = []
         if ID == wx.ID_OK:
             values_dic = dlg.GetDict()
-            for key in range(1, len(options.keys()) + 1):
+            for key in range(1, len(list(options.keys())) + 1):
                 values.append(values_dic[key])
         dlg.Destroy()
         if len(message) == 1:
@@ -18333,11 +18332,11 @@ class MainFrame(wxp.Frame):
         clip = pyavs.AvsClip(text, filename, workdir, display_clip=False, 
                              reorder_rgb=reorder_rgb, interlaced=self.interlaced)   
         if not clip.initialized or clip.IsErrorClip():
-            self.MacroMsgBox(u'\n\n'.join((_('Error loading the script'), clip.error_message)), 
+            self.MacroMsgBox('\n\n'.join((_('Error loading the script'), clip.error_message)), 
                              _('Error'))
             return
         if not frames:
-            frames = range(clip.Framecount)
+            frames = list(range(clip.Framecount))
             total_frames = clip.Framecount
         elif callback:
             total_frames = len(frames)
@@ -18387,7 +18386,7 @@ class MainFrame(wxp.Frame):
                         cmd.stdin.write(buf)
                         continue
                     else:
-                        self.MacroMsgBox(u'\n\n'.join((_('Error requesting frame {number}').
+                        self.MacroMsgBox('\n\n'.join((_('Error requesting frame {number}').
                                          format(number=frame), error)), _('Error'))
                 cmd.terminate()
                 if wait:
@@ -18402,7 +18401,7 @@ class MainFrame(wxp.Frame):
             if wait:
                 return cmd, cmd.wait()
             return cmd
-        except Exception, err:
+        except Exception as err:
             try:
                 if cmd.poll() is None:
                     cmd.terminate()
@@ -18419,7 +18418,7 @@ class MainFrame(wxp.Frame):
         returns a list of tuple (frame, title).
         
         '''
-        bookmarkList = [value for value, bmtype in self.GetBookmarkFrameList().items() if bmtype == 0]
+        bookmarkList = [value for value, bmtype in list(self.GetBookmarkFrameList().items()) if bmtype == 0]
         if title:
             for i in range(len(bookmarkList)):
                 title = self.bookmarkDict.get(bookmarkList[i], '')
@@ -18444,7 +18443,7 @@ class MainFrame(wxp.Frame):
             try:
                 values = []
                 for item in input:
-                    if isinstance(item, basestring):
+                    if isinstance(item, str):
                         return self.MacroSetBookmark2(input)
                     values.append(int(item))
             except (TypeError, ValueError):
@@ -18464,7 +18463,7 @@ class MainFrame(wxp.Frame):
         try:
             value, title = input
             value = int(value)
-            if not isinstance(title, basestring): return False
+            if not isinstance(title, str): return False
             title = title.strip()
             self.bookmarkDict[value] = title
             if not title:
@@ -18476,7 +18475,7 @@ class MainFrame(wxp.Frame):
                 return False
             try:
                 items = [(int(value), title.strip()) for value, title in input 
-                         if isinstance(title, basestring)]
+                         if isinstance(title, str)]
                 if len(items) != len(input): return False
             except (TypeError, ValueError):
                 return False            
@@ -18562,7 +18561,7 @@ class MainFrame(wxp.Frame):
             else:
                 step = float(step)
             count = int(round((maxval - minval) / step + 1))
-            numlist = [minval,] + map(lambda x: step*x + minval, range(1, count)) #+ [maxval,]
+            numlist = [minval,] + [step*x + minval for x in range(1, count)] #+ [maxval,]
             if nDecimal == 0:
                 numlist = [int(x) for x in numlist]
             info.append((text, label, numlist, nDecimal))
@@ -18579,14 +18578,14 @@ class MainFrame(wxp.Frame):
         # and split into a list of lines:
         lines = docstring.expandtabs().splitlines()
         # Determine minimum indentation (first line doesn't count):
-        indent = sys.maxint
+        indent = sys.maxsize
         for line in lines[1:]:
             stripped = line.lstrip()
             if stripped:
                 indent = min(indent, len(line) - len(stripped))
         # Remove indentation (first line is special):
         trimmed = [lines[0].strip()]
-        if indent < sys.maxint:
+        if indent < sys.maxsize:
             for line in lines[1:]:
                 trimmed.append(line[indent:].rstrip())
         doc = '\n'.join(trimmed).split('\n', 1)
@@ -18812,7 +18811,7 @@ class MainFrame(wxp.Frame):
                 # Check for syntax errors (thows SyntaxError exception with line number)
                 try:
                     compile('\n'.join(macroLines+['pass']), macrofilename, 'exec')
-                except SyntaxError, e:
+                except SyntaxError as e:
                     if not str(e).startswith("'return' outside function"):
                         raise
                 # Wrap the macro in a function (allows top-level variables to be treated "globally" within the function)
@@ -18834,28 +18833,28 @@ class MainFrame(wxp.Frame):
                 if macrobasename not in self.optionsMacros:
                     self.optionsMacros[macrobasename] = {}
                 self.macroVars['avsp'].Options = self.optionsMacros[macrobasename]
-                hash_pre = hash(repr(self.optionsMacros[macrobasename].items()))
+                hash_pre = hash(repr(list(self.optionsMacros[macrobasename].items())))
                 self.macroVars['avsp'].Last = self.macroVars['last']
                 def MacroHelp(function):
                     '''help(function)\nPrint the function's description of use'''
-                    print self.FormatDocstring(function)
+                    print(self.FormatDocstring(function))
                 self.macroVars['help'] = MacroHelp
                 self.macroVars['_'] = _
                 # Execute the macro
                 def MacroFunction():
                     try:
-                        exec macrotxt in self.macroVars, {}
+                        exec(macrotxt, self.macroVars, {})
                     except:
                         ShowException()
-                    if (hash(repr(self.optionsMacros[macrobasename].items())) != hash_pre and
+                    if (hash(repr(list(self.optionsMacros[macrobasename].items()))) != hash_pre and
                         os.path.isdir(os.path.dirname(self.macrosfilename))):
                             f = open(self.macrosfilename, mode='wb')
-                            cPickle.dump(self.optionsMacros, f, protocol=0)
+                            pickle.dump(self.optionsMacros, f, protocol=0)
                             f.close()
                 if thread:    
                     thread = threading.Thread(target=MacroFunction, name='MacroThread')
-                    thread.daemon = True
-                    thread.start()
+                    _thread.daemon = True
+                    _thread.start()
                 else:
                     MacroFunction()
             except:

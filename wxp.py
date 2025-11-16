@@ -42,9 +42,9 @@ import time
 
 import wx.lib.newevent
 import socket
-import thread
-import StringIO
-import cPickle
+import _thread
+import io
+import pickle
 
 from icons import checked_icon, unchecked_icon
 
@@ -110,12 +110,12 @@ def MakeWindowTransparent(window, amount, intangible=False):
     import ctypes
     user32 = ctypes.windll.user32
     hwnd = window.GetHandle()
-    style = user32.GetWindowLongA(hwnd, 0xffffffecL)
+    style = user32.GetWindowLongA(hwnd, 0xffffffec)
     style |= 0x00080000
     if intangible:
-        style |= 0x00000020L
+        style |= 0x00000020
         window.SetWindowStyleFlag(window.GetWindowStyleFlag()|wx.STAY_ON_TOP)
-    user32.SetWindowLongA(hwnd, 0xffffffecL, style)
+    user32.SetWindowLongA(hwnd, 0xffffffec, style)
     user32.SetLayeredWindowAttributes(hwnd, 0, amount, 2)
     
 def GetTranslatedShortcut(shortcut):
@@ -196,7 +196,7 @@ class StdoutStderrWindow:
         if hasattr(sys,'frozen'):
             self.logfilename = os.path.join(os.path.dirname(sys.executable), logname)
         else:
-            self.logfilename = os.path.join(os.getcwdu(), logname)
+            self.logfilename = os.path.join(os.getcwd(), logname)
         self.firstTime = True
 
     def SetParent(self, parent):
@@ -265,9 +265,9 @@ class SingleInstanceApp(wx.App):
     boolSingleInstance = True
     def __init__(self, *args, **kwargs):
         # Get extra keyword arguments
-        if kwargs.has_key('name'):
+        if 'name' in kwargs:
             self.name = kwargs.pop('name')
-        if kwargs.has_key('port'):
+        if 'port' in kwargs:
             self.port = kwargs.pop('port')
         # Determine if program is already running or not
         self.instance = wx.SingleInstanceChecker(self.name+wx.GetUserId())
@@ -277,8 +277,8 @@ class SingleInstanceApp(wx.App):
                 # Send data to the main instance via socket
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect(('localhost', self.port))
-                pickledstring = StringIO.StringIO()
-                cPickle.dump(sys.argv[1:],pickledstring)
+                pickledstring = io.StringIO()
+                pickle.dump(sys.argv[1:],pickledstring)
                 sock.sendall(pickledstring.getvalue())
                 response = sock.recv(8192)
             # Start the wx.App (typically check self.IsFirstInstance flag and return False)
@@ -306,7 +306,7 @@ class ArgsPosterThread:
         
     def Start(self):
         self.keepGoing = self.running = True
-        thread.start_new_thread(self.Run, ())
+        _thread.start_new_thread(self.Run, ())
         
     def Stop(self):
         self.keepGoing = False
@@ -381,8 +381,8 @@ class ArgsPosterThread:
                     receivedData = newSocket.recv(8192)
                     if not receivedData: break
                     # Post a wxPython event with the unpickled data
-                    pickledstring = StringIO.StringIO(receivedData)
-                    unpickled = cPickle.load(pickledstring)
+                    pickledstring = io.StringIO(receivedData)
+                    unpickled = pickle.load(pickledstring)
                     evt = PostArgsEvent(data=unpickled)
                     wx.PostEvent(self.app, evt)
                     newSocket.sendall(receivedData)
@@ -477,7 +477,7 @@ class Frame(wx.Frame):
             except ValueError:
                 pass
             if shortcut != '' and shortcut not in [item[1] for item in shortcutList]:
-                shortcutString = u'\t%s\u00a0' % GetTranslatedShortcut(shortcut)
+                shortcutString = '\t%s\u00a0' % GetTranslatedShortcut(shortcut)
             else:
                 shortcutString = ''
             # Append the menu item
@@ -506,7 +506,7 @@ class Frame(wx.Frame):
     def BindShortcutsToWindows(self, shortcutInfo, forcewindow=None):
         idDict = dict([(id, shortcut) for itemName, shortcut, id in shortcutInfo])
         forceAccelList = []
-        for window, idList in self._shortcutBindWindowDict.items():
+        for window, idList in list(self._shortcutBindWindowDict.items()):
             accelList = []
             #~ for label, data in value.items():
                 #~ accelString, id = data
@@ -693,8 +693,8 @@ class QuickFindDialog(wx.Dialog):
         accel_list.append(wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_UP, up_id))
         accel_list.append(wx.AcceleratorEntry(wx.ACCEL_NORMAL, wx.WXK_DOWN, down_id))
         find = replace = False
-        find_menu = u'{0} -> {1}'.format(_('&Edit'), _('Find...')).replace('&', '')
-        replace_menu = u'{0} -> {1}'.format(_('&Edit'), _('Replace...')).replace('&', '')
+        find_menu = '{0} -> {1}'.format(_('&Edit'), _('Find...')).replace('&', '')
+        replace_menu = '{0} -> {1}'.format(_('&Edit'), _('Replace...')).replace('&', '')
         for menu_item, shortcut, id in self.app.options['shortcuts']:
             if not find and menu_item.replace('&', '') == find_menu:
                 accel = wx.GetAccelFromString('\t' + shortcut)
@@ -1374,7 +1374,7 @@ class OptionsDialog(wx.Dialog):
                         expand = misc['expand'] if 'expand' in misc else False
                         label_position = misc['label_position'] if 'label_position' in misc else wx.HORIZONTAL
                         list_type = wx.CB_DROPDOWN if 'writable' in misc and misc['writable'] else wx.CB_READONLY
-                        if misc['choices'] and not isinstance(misc['choices'][0], basestring):
+                        if misc['choices'] and not isinstance(misc['choices'][0], str):
                             ctrl = wx.ComboBox(tabPanel, wx.ID_ANY, size=(width,-1), style=wx.CB_READONLY)
                             ctrl.client_data = True # not ctrl.HasClientData() in wxWidgets 2.8
                             for display_string, client_data in misc['choices']:
@@ -1579,7 +1579,7 @@ class OptionsDialog(wx.Dialog):
         return self.options
         
     def UpdateDict(self):
-        for key, value in self.controls.items():
+        for key, value in list(self.controls.items()):
             ctrl, flag, tabIndex = value
             if flag in (OPT_ELEM_DIR, OPT_ELEM_DIR_URL):
                 entry = self.GetParent().ExpandVars(ctrl.GetValue())
@@ -1588,7 +1588,7 @@ class OptionsDialog(wx.Dialog):
                 elif flag == OPT_ELEM_DIR_URL and entry.lstrip().startswith('http://'):
                     newValue = entry
                 else:
-                    label = u'\n\n{0}{1}'.format(ctrl.Label.rstrip(':') + ': ' if ctrl.Label else '', entry)
+                    label = '\n\n{0}{1}'.format(ctrl.Label.rstrip(':') + ': ' if ctrl.Label else '', entry)
                     self.ShowWarning(ctrl, _('Invalid directory!') + label, tabIndex)
                     return False
             elif flag in (OPT_ELEM_FILE, OPT_ELEM_FILE_OPEN, OPT_ELEM_FILE_SAVE, OPT_ELEM_FILE_URL):
@@ -1597,7 +1597,7 @@ class OptionsDialog(wx.Dialog):
                    flag == OPT_ELEM_FILE_URL and entry.lstrip().startswith('http://')):
                     newValue = entry
                 else:
-                    label = u'\n\n{0}{1}'.format(ctrl.Label.rstrip(':') + ': ' if ctrl.Label else '', entry)
+                    label = '\n\n{0}{1}'.format(ctrl.Label.rstrip(':') + ': ' if ctrl.Label else '', entry)
                     self.ShowWarning(ctrl, _('Invalid filename!') + label, tabIndex)
                     return False
             elif flag == OPT_ELEM_COLOR:
@@ -1835,7 +1835,7 @@ class ShortcutsDialog(wx.Dialog):
             dlg.checkBoxAlt.SetValue(boolAlt)
             dlg.checkBoxShift.SetValue(boolShift)
             if not dlg.listBoxKey.SetStringSelection(keyString):
-                print>>sys.stderr, _('%(keyString)s not found in key string list') % locals()
+                print(_('%(keyString)s not found in key string list') % locals(), file=sys.stderr)
         ID = dlg.ShowModal()
         # Set the data
         if ID == wx.ID_OK:
@@ -1988,7 +1988,7 @@ class EditStringDictDialog(wx.Dialog):
         return self.infoDict
         
     def UpdateDictEntry(self):
-        if self.infoDict.has_key(self.previousKey) and self.textChanged:
+        if self.previousKey in self.infoDict and self.textChanged:
             self.infoDict[self.previousKey] = self.textCtrl.GetValue()
         
     def OnValueTextChanged(self, event):
@@ -2005,7 +2005,7 @@ class EditStringDictDialog(wx.Dialog):
             self.textCtrl.SetInsertionPoint(0)
             self.textChanged = False
         else:
-            print>>sys.stderr, _('Error: key %(key)s does not exist!') % locals()
+            print(_('Error: key %(key)s does not exist!') % locals(), file=sys.stderr)
         self.previousKey = key
             
     def OnListItemEdit(self, event):
@@ -2074,7 +2074,7 @@ class EditStringDictDialog(wx.Dialog):
                 wx.MessageBox(_('Must enter a name!'), _('Error'), 
                               style=wx.OK|wx.ICON_ERROR)
                 return
-            if self.infoDict.has_key(newKey):
+            if newKey in self.infoDict:
                 wx.MessageBox(_('Item %(newKey)s already exists!') % locals(), 
                               _('Error'), style=wx.OK|wx.ICON_ERROR)
                 return
@@ -2242,7 +2242,7 @@ class Slider(wx.Slider):
             if minValue == 0 and (maxValue == -1 or maxValue ==0):
                 maxValue = 1
             else:
-                print>>sys.stderr, _('Error: minValue must be less than maxValue')
+                print(_('Error: minValue must be less than maxValue'), file=sys.stderr)
                 return
         self.uMinValue = minValue
         self.uMaxValue = maxValue

@@ -47,20 +47,20 @@ except:
 if os.name == 'nt':
     if __debug__:
         if directory:
-            print 'Using a custom AviSynth directory:', directory
+            print('Using a custom AviSynth directory:', directory)
         else:
-            print 'Using AviSynth from PATH'
+            print('Using AviSynth from PATH')
     path = os.path.join(directory, 'avisynth.dll')
-    if isinstance(path, unicode): # fix for https://bugs.python.org/issue29082
+    if isinstance(path, str): # fix for https://bugs.python.org/issue29082
         path = path.encode('mbcs')
     avidll = ctypes.WinDLL(path)
     FUNCTYPE = ctypes.WINFUNCTYPE
 else:
     if __debug__:
         if directory:
-            print 'Using a custom AvxSynth directory:', directory
+            print('Using a custom AvxSynth directory:', directory)
         else:
-            print 'Using AvxSynth from LD_LIBRARY_PATH'
+            print('Using AvxSynth from LD_LIBRARY_PATH')
     path = os.path.join(directory, 'libavxsynth.so')
     avidll = ctypes.CDLL(path)
     FUNCTYPE = ctypes.CFUNCTYPE
@@ -272,7 +272,7 @@ class AVS_ScriptEnvironment(object):
         return avs_function_exists(self, name)
     
     def get_var(self, name, type=False):
-        if isinstance(name, unicode):
+        if isinstance(name, str):
             # mbcs will replace invalid characters anyway
             name = name.encode(encoding, 'backslashreplace')
         value = AVS_Value(avs_get_var(self, name), env=self)
@@ -308,7 +308,7 @@ class AVS_ScriptEnvironment(object):
         return avs_set_memory_max(self, mem)
     
     def set_working_dir(self, new_dir):
-        if isinstance(new_dir, unicode):
+        if isinstance(new_dir, str):
             new_dir = new_dir.encode(encoding, 'backslashreplace')
         return avs_set_working_dir(self, new_dir)
     
@@ -750,7 +750,7 @@ class AVS_Value(object):
         if   isinstance(value, bool):       self.set_bool(value)
         elif isinstance(value, int):        self.set_int(value)
         elif isinstance(value, float):      self.set_float(value)
-        elif isinstance(value, basestring): self.set_string(value, env)
+        elif isinstance(value, str): self.set_string(value, env)
         elif isinstance(value, AVS_Clip):   self.set_clip(value)
         elif isinstance(value, AVS_Value):  self.copy_from(value)
         elif isinstance(value, (ctypes._SimpleCData, ctypes.Structure, 
@@ -797,7 +797,7 @@ class AVS_Value(object):
     def set_string(self, value, env=None):
         if self.is_defined():
             self.release()
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             value = value.encode(encoding, 'backslashreplace')
         env = env or self.env
         if isinstance(env, AVS_ScriptEnvironment):
@@ -808,7 +808,7 @@ class AVS_Value(object):
     def set_error(self, value, env=None):
         if self.is_defined():
             self.release()
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             value = value.encode(encoding, 'backslashreplace')
         env = env or self.env
         if isinstance(env, AVS_ScriptEnvironment):
@@ -1205,49 +1205,49 @@ AVS_Value.avs_release_value=avs_release_value
 def test():
     
     env = AVS_ScriptEnvironment(3)
-    print 'environment created:', env
+    print('environment created:', env)
     err = env.get_error()
     if err is not None:
-        print 'error:', err
+        print('error:', err)
         return
-    print 'checking for interface 3:', env.check_version(3)
-    print 'checking for interface 33:', env.check_version(33)
-    print env.invoke('VersionString')
+    print('checking for interface 3:', env.check_version(3))
+    print('checking for interface 33:', env.check_version(33))
+    print(env.invoke('VersionString'))
     
-    print '\nsome internal functions...'
+    print('\nsome internal functions...')
     for function_name in env.get_var('$InternalFunctions$').split()[:10]:
         try:
             params = env.get_var('$Plugin!' + function_name + '!Param$')
-        except AvisynthError, err:
+        except AvisynthError as err:
             if str(err) != 'NotFound': raise
         else:
-            print ' ', function_name, params
+            print(' ', function_name, params)
     var_name, value = 'test var', 'some text'
-    print '\nsetting a string variable with value {0}'.format(repr(value))
+    print('\nsetting a string variable with value {0}'.format(repr(value)))
     env.set_var(var_name, value)
-    print 'value retrieved:', repr(env.get_var(var_name)) # check save_string
-    print '\ninvoking...'
+    print('value retrieved:', repr(env.get_var(var_name))) # check save_string
+    print('\ninvoking...')
     try:
 #        ret = env.invoke('Version')
         ret = env.invoke('BlankClip', [100, 200, 300])
 #        ret = env.invoke('Eval', 
 #                         ['assert(false, "assert message")', 'script title'])
-    except AvisynthError, err:
-        print 'error:', env.get_error()
+    except AvisynthError as err:
+        print('error:', env.get_error())
     else:
         if isinstance(ret, AVS_Clip):
             clip = ret
             AVS_Value(AVS_Value(clip, env), env).get_value() # test passing clip
-            print clip.get_video_info()
+            print(clip.get_video_info())
             frame = clip.get_frame(5)
             err = clip.get_error()
             if err:
-                print 'error:', err
+                print('error:', err)
             else:
-                print frame
+                print(frame)
                 frame.get_read_ptr()[0:20]
         else:
-            print 'value:', ret
+            print('value:', ret)
     
 if __name__ == '__main__':
     test()
