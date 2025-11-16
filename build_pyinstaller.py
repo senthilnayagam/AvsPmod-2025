@@ -62,7 +62,7 @@ def clean_build_dirs():
 def check_pyinstaller():
     """Check if PyInstaller is installed"""
     try:
-        import PyInstaller
+        import PyInstaller  # type: ignore[import]
         version = PyInstaller.__version__
         print(f"✅ PyInstaller {version} found")
         return True
