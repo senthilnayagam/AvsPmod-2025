@@ -6656,6 +6656,9 @@ class MainFrame(wxp.Frame):
             if str(err) != "NotFound": raise
             funclist = []
         else:
+            # Decode bytes to string if needed (Python 3)
+            if isinstance(intfunc, bytes):
+                intfunc = intfunc.decode('utf-8')
             funclist = [(name, 0) for name in intfunc.split()]
         # autoladed plugins
         try:
@@ -6663,6 +6666,9 @@ class MainFrame(wxp.Frame):
         except avisynth.AvisynthError as err:
             if str(err) != "NotFound": raise
         else:
+            # Decode bytes to string if needed (Python 3)
+            if isinstance(pluginfunc, bytes):
+                pluginfunc = pluginfunc.decode('utf-8')
             pluginfuncList = []
             baddllnameList = []
             short_name = None
