@@ -572,7 +572,7 @@ class Frame(wx.Frame):
         button.Bind(wx.EVT_BUTTON, handler)
         # Set the tool tip string if given
         if toolTipTxt:
-            button.SetToolTipString(toolTipTxt)
+            button.SetToolTip(toolTipTxt)
         # Define mouse event functions (change status bar text and button bevel width)
         def OnMouseMove(event):
             if statusTxt:
@@ -1176,7 +1176,7 @@ class OptionsDialog(wx.Dialog):
                         if label:
                             staticText = wx.StaticText(tabPanel, wx.ID_ANY, label)
                             if tip:
-                                staticText.SetToolTipString(tip)
+                                staticText.SetToolTip(tip)
                             if adjust_width:
                                 width = staticText.GetTextExtent(label)[0] + 4
                             itemSizer.Add(staticText, 0, wx.EXPAND|wx.ALL, 2)
@@ -1194,7 +1194,7 @@ class OptionsDialog(wx.Dialog):
                         ctrl.SetMinSize(ctrl.GetBestSize())
                         ctrl.SetValue(bool(optionsValue))
                         if tip:
-                            ctrl.SetToolTipString(tip)
+                            ctrl.SetToolTip(tip)
                         itemSizer = wx.BoxSizer(wx.VERTICAL)
                         if 'ident' in misc:
                             identSizer = wx.BoxSizer(wx.HORIZONTAL)
@@ -1222,8 +1222,8 @@ class OptionsDialog(wx.Dialog):
                         itemSizer = wx.BoxSizer(label_position)
                         staticText = wx.StaticText(tabPanel, wx.ID_ANY, label)
                         if tip:
-                            staticText.SetToolTipString(tip)
-                            ctrl._textctrl.SetToolTipString(tip)
+                            staticText.SetToolTip(tip)
+                            ctrl._textctrl.SetToolTip(tip)
                         if label_position == wx.HORIZONTAL:
                             itemSizer.Add(staticText, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 6)
                             expand_flags = (1, 0) if expand else (0, 0)
@@ -1254,8 +1254,8 @@ class OptionsDialog(wx.Dialog):
                         ctrl.SetTickFreq(TickFreq)
                         staticText = wx.StaticText(tabPanel, wx.ID_ANY, label)
                         if tip:
-                            staticText.SetToolTipString(tip)
-                            ctrl.SetToolTipString(tip)
+                            staticText.SetToolTip(tip)
+                            ctrl.SetToolTip(tip)
                         itemSizer = wx.BoxSizer(label_position)
                         if label_position == wx.HORIZONTAL:
                             itemSizer.Add(staticText, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 5)
@@ -1285,7 +1285,7 @@ class OptionsDialog(wx.Dialog):
                         Label = label
                         if label and label_position == wx.VERTICAL:
                             staticText = wx.StaticText(tabPanel, wx.ID_ANY, label)
-                            staticText.SetToolTipString(tip)
+                            staticText.SetToolTip(tip)
                             itemSizer.Add(staticText, 0, wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, 2)
                             label = ''
                         ctrl = filebrowse.FileBrowseButton(tabPanel, wx.ID_ANY, size=(width,-1),
@@ -1302,7 +1302,7 @@ class OptionsDialog(wx.Dialog):
                         if not label: 
                             ctrl.Sizer.Children[0].Sizer.Children[1].SetBorder(0)
                         elif tip:
-                            ctrl.label.SetToolTipString(tip)
+                            ctrl.label.SetToolTip(tip)
                         ctrl.Sizer.Children[0].Sizer.Children[2].SetInitSize(buttonWidth, -1)
                         ctrl.Label = Label
                         itemSizer.Add(ctrl, 0, (wx.EXPAND if expand else 0)|wx.ALIGN_CENTER_VERTICAL|wx.TOP|wx.BOTTOM, 2)
@@ -1323,7 +1323,7 @@ class OptionsDialog(wx.Dialog):
                         Label = label
                         if label and label_position == wx.VERTICAL:
                                 staticText = wx.StaticText(tabPanel, wx.ID_ANY, label)
-                                staticText.SetToolTipString(tip)
+                                staticText.SetToolTip(tip)
                                 itemSizer.Add(staticText, 0, wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, 2)
                                 label = ''
                         ctrl = filebrowse.DirBrowseButton(tabPanel, wx.ID_ANY, size=(width,-1),
@@ -1339,7 +1339,7 @@ class OptionsDialog(wx.Dialog):
                         if not label: 
                             ctrl.Sizer.Children[0].Sizer.Children[1].SetBorder(0)
                         elif tip:
-                            ctrl.label.SetToolTipString(tip)
+                            ctrl.label.SetToolTip(tip)
                         ctrl.Sizer.Children[0].Sizer.Children[2].SetInitSize(buttonWidth, -1)
                         ctrl.Label = Label
                         itemSizer.Add(ctrl, 0, (wx.EXPAND if expand else 0)|wx.ALIGN_CENTER_VERTICAL|wx.TOP|wx.BOTTOM, 2)
@@ -1363,7 +1363,7 @@ class OptionsDialog(wx.Dialog):
                                 ctrl.SetStringSelection(s)
                                 break
                         if tip:
-                            ctrl.SetToolTipString(tip)
+                            ctrl.SetToolTip(tip)
                         itemSizer = wx.BoxSizer(wx.HORIZONTAL)
                         itemSizer.Add(ctrl, expand, wx.ALIGN_CENTER_VERTICAL|wx.TOP|wx.BOTTOM, 2)
                     
@@ -1388,8 +1388,8 @@ class OptionsDialog(wx.Dialog):
                         itemSizer = wx.BoxSizer(label_position)
                         staticText = wx.StaticText(tabPanel, wx.ID_ANY, label)
                         if tip:
-                            staticText.SetToolTipString(tip)
-                            ctrl.SetToolTipString(tip)
+                            staticText.SetToolTip(tip)
+                            ctrl.SetToolTip(tip)
                         if label_position == wx.HORIZONTAL:
                             itemSizer.Add(staticText, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 5)
                             expand_flags = (1, 0) if expand else (0, 0)
@@ -1409,7 +1409,7 @@ class OptionsDialog(wx.Dialog):
                         ctrl = wx.Button(tabPanel, wx.ID_ANY, size=(width,-1), label=label)
                         self.Bind(wx.EVT_BUTTON, handler, ctrl)
                         if tip:
-                            ctrl.SetToolTipString(tip)
+                            ctrl.SetToolTip(tip)
                         itemSizer = wx.BoxSizer(wx.VERTICAL)
                         #~ staticText = wx.StaticText(tabPanel, wx.ID_ANY, label)
                         #~ ctrl = wxButtons.GenButton(tabPanel, wx.ID_ANY, label=label)
@@ -1427,8 +1427,8 @@ class OptionsDialog(wx.Dialog):
                         ctrl = ColourSelect(tabPanel, wx.ID_ANY, colour=colour, 
                                             size=(width, -1), colour_data=colour_data)
                         if tip:
-                            staticText.SetToolTipString(tip)
-                            ctrl.SetToolTipString(tip)
+                            staticText.SetToolTip(tip)
+                            ctrl.SetToolTip(tip)
                         itemSizer = wx.BoxSizer(wx.HORIZONTAL)
                         itemSizer.Add(staticText, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 6)
                         itemSizer.Add(ctrl, 0, wx.ALIGN_CENTER_VERTICAL|wx.TOP|wx.BOTTOM, 2)
@@ -1455,8 +1455,8 @@ class OptionsDialog(wx.Dialog):
                                                  size=(width,-1), name=label, 
                                                  style=wx.FNTP_FONTDESC_AS_LABEL)
                         if tip:
-                            staticText.SetToolTipString(tip)
-                            ctrl.SetToolTipString(tip)
+                            staticText.SetToolTip(tip)
+                            ctrl.SetToolTip(tip)
                         itemSizer = wx.BoxSizer(wx.HORIZONTAL)
                         itemSizer.Add(staticText, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 6)
                         itemSizer.Add(ctrl, 0, wx.ALIGN_CENTER_VERTICAL|wx.EXPAND|wx.TOP|wx.BOTTOM, 2)
@@ -1470,8 +1470,8 @@ class OptionsDialog(wx.Dialog):
                         staticText = wx.StaticText(tabPanel, wx.ID_ANY, label)
                         ctrl = wx.TextCtrl(tabPanel, wx.ID_ANY, size=(width,-1), value=optionsValue)
                         if tip:
-                            staticText.SetToolTipString(tip)
-                            ctrl.SetToolTipString(tip)
+                            staticText.SetToolTip(tip)
+                            ctrl.SetToolTip(tip)
                         itemSizer = wx.BoxSizer(label_position)
                         if label_position == wx.HORIZONTAL:
                             itemSizer.Add(staticText, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 5)

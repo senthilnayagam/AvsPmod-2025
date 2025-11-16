@@ -42,8 +42,6 @@ try:
 except ImportError:
     from distutils.core import setup
 import py2exe
-import wxversion
-wxversion.select('2.8')
 import wx
 
 import global_vars

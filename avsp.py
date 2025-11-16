@@ -97,6 +97,19 @@ import wx.lib.buttons as wxButtons
 import  wx.lib.colourselect as  colourselect
 import wxp
 
+# wxPython 4.x compatibility: Create VERSION tuple from version string
+# wxPython 4.x is always >= (4, 0), so all checks for < (2, 9) are False
+# and all checks for > (2, 9) or >= (2, 9) are True
+try:
+    # wxPython 4.x: wx.VERSION is deprecated, use wx.version()
+    if not hasattr(wx, 'VERSION') or not isinstance(wx.VERSION, tuple):
+        version_string = wx.version().split()[0]  # Get "4.2.1" from "4.2.1 gtk3 (phoenix) wxWidgets 3.2.4"
+        version_parts = version_string.split('.')
+        wx.VERSION = tuple(int(x) for x in version_parts[:3])  # (4, 2, 1)
+except:
+    # Fallback if version parsing fails
+    wx.VERSION = (4, 2, 0)
+
 from icons import AvsP_icon, next_icon, play_icon, pause_icon, external_icon, \
                   skip_icon, spin_icon, ok_icon, smile_icon, question_icon, \
                   rectangle_icon, dragdrop_cursor
@@ -2491,7 +2504,7 @@ class AvsStyleDialog(wx.Dialog):
                     label, optKey, tip = label
                     staticText = checkbox = wx.CheckBox(tabPanel, wx.ID_ANY, label)
                     checkbox.SetValue(parent.options[optKey])
-                    checkbox.SetToolTipString(tip)
+                    checkbox.SetToolTip(tip)
                     self.controls2[optKey] = checkbox
                 else:
                     staticText = wx.StaticText(tabPanel, wx.ID_ANY, label)
@@ -2544,7 +2557,7 @@ class AvsStyleDialog(wx.Dialog):
         self.Bind(wx.EVT_CHOICE, self.OnSelectTheme, theme_choice)
         only_colors_checkbox = wx.CheckBox(self, wx.ID_ANY, _('Only change colours'))
         only_colors_checkbox.SetValue(parent.options['theme_set_only_colors'])
-        only_colors_checkbox.SetToolTipString(_("When selecting a theme, don't change current fonts"))
+        only_colors_checkbox.SetToolTip(_("When selecting a theme, don't change current fonts"))
         self.controls2['theme_set_only_colors'] = only_colors_checkbox
         okay  = wx.Button(self, wx.ID_OK, _('OK'))
         self.Bind(wx.EVT_BUTTON, self.OnButtonOK, okay)
@@ -2554,7 +2567,7 @@ class AvsStyleDialog(wx.Dialog):
             label, optKey, tip = extra
             checkbox = wx.CheckBox(self, wx.ID_ANY, label)
             checkbox.SetValue(parent.options[optKey])
-            checkbox.SetToolTipString(tip)
+            checkbox.SetToolTip(tip)
             self.controls2[optKey] = checkbox
             btns.Add(checkbox, 0, wx.LEFT | wx.RIGHT | wx.ALIGN_CENTER_VERTICAL, 3)
         btns.Add(theme_choice, 0, wx.LEFT | wx.RIGHT, 3)
@@ -18904,3 +18917,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

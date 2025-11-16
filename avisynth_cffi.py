@@ -782,12 +782,17 @@ ffi.cdef(cdef_str)
 if abi: # TODO
     avs = ffi.dlopen('avisynth')
 else:
-    avs = ffi.verify(verify_str, libraries=[], library_dirs=[],
-        modulename=os.path.splitext(__file__)[0] + '_ext', # comment out on debugging
-        )
-    avs.library = avs.avs_load_library_w()
-    if avs.library == ffi.NULL:
-        raise OSError(*ffi.getwinerror())
+    try:
+        avs = ffi.verify(verify_str, libraries=[], library_dirs=[],
+            modulename=os.path.splitext(__file__)[0] + '_ext', # comment out on debugging
+            )
+        avs.library = avs.avs_load_library_w()
+        if avs.library == ffi.NULL:
+            raise OSError(*ffi.getwinerror())
+    except Exception as e:
+        # If compilation fails (e.g., avisynth_c.h not found), raise OSError
+        # so the main application can handle it gracefully
+        raise OSError("Failed to compile AviSynth CFFI bindings: " + str(e))
 
 class AVS_VideoInfo(object):
     
