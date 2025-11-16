@@ -5289,7 +5289,7 @@ class MainFrame(wxp.Frame):
                 # Send data to the main instance via socket
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect(('localhost', self.port))
-                pickledstring = io.StringIO()
+                pickledstring = BytesIO()
                 pickle.dump(sys.argv[1:],pickledstring)
                 sock.sendall(pickledstring.getvalue())
                 response = sock.recv(8192)
@@ -11822,7 +11822,7 @@ class MainFrame(wxp.Frame):
             pass
         # Check if macros are still running
         for thread in threading.enumerate():
-            if _thread.name == 'MacroThread':
+            if thread.name == 'MacroThread':
                 dlg = wx.MessageDialog(self, _('A macro is still running. Close anyway?'),
                                        _('Warning'), wx.OK|wx.CANCEL|wx.ICON_EXCLAMATION)
                 ID = dlg.ShowModal()
@@ -18868,8 +18868,8 @@ class MainFrame(wxp.Frame):
                             f.close()
                 if thread:    
                     thread = threading.Thread(target=MacroFunction, name='MacroThread')
-                    _thread.daemon = True
-                    _thread.start()
+                    thread.daemon = True
+                    thread.start()
                 else:
                     MacroFunction()
             except:

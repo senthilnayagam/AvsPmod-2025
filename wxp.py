@@ -2254,7 +2254,7 @@ class Slider(wx.Slider):
     def SetSelection(self, startPos, endPos):
         self.uSelStart = startPos
         self.uSelEnd = endPos
-        super(Slider, self).SetSelection(self._upos2wxpos(startPos), self._upos2wxpos(endFrame))
+        super(Slider, self).SetSelection(self._upos2wxpos(startPos), self._upos2wxpos(endPos))
         
     def Increment(self):
         wxpos = super(Slider, self).GetValue()
