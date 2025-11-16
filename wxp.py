@@ -42,8 +42,8 @@ import time
 
 import wx.lib.newevent
 import socket
-import _thread
-import io
+import _thread as thread
+from io import StringIO
 import pickle
 
 from icons import checked_icon, unchecked_icon
@@ -277,7 +277,7 @@ class SingleInstanceApp(wx.App):
                 # Send data to the main instance via socket
                 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
                 sock.connect(('localhost', self.port))
-                pickledstring = io.StringIO()
+                pickledstring = StringIO()
                 pickle.dump(sys.argv[1:],pickledstring)
                 sock.sendall(pickledstring.getvalue())
                 response = sock.recv(8192)
@@ -306,7 +306,7 @@ class ArgsPosterThread:
         
     def Start(self):
         self.keepGoing = self.running = True
-        _thread.start_new_thread(self.Run, ())
+        thread.start_new_thread(self.Run, ())
         
     def Stop(self):
         self.keepGoing = False
@@ -381,7 +381,7 @@ class ArgsPosterThread:
                     receivedData = newSocket.recv(8192)
                     if not receivedData: break
                     # Post a wxPython event with the unpickled data
-                    pickledstring = io.StringIO(receivedData)
+                    pickledstring = StringIO(receivedData)
                     unpickled = pickle.load(pickledstring)
                     evt = PostArgsEvent(data=unpickled)
                     wx.PostEvent(self.app, evt)

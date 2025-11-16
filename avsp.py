@@ -56,21 +56,23 @@ import bisect
 import random, math, copy
 import subprocess, shlex
 import socket
-import _thread
+import _thread as thread
 import threading
 import time
-import io
+from io import StringIO, BytesIO
 import textwrap
 import ctypes
 import tempfile
 import zlib
 import glob
-import urllib.request, urllib.error, urllib.parse
+import urllib.request as urllib2
+import urllib.error
+import urllib.parse
 import cgi
 if os.name == 'nt':
-    import winreg
+    import winreg as _winreg
 from hashlib import md5
-import builtins
+import builtins as __builtin__
 import collections
 
 if hasattr(sys,'frozen'):
@@ -86,7 +88,7 @@ def _(s):
         if s2:
             return s2.replace(r'\n','\n')
     return s
-builtins._ = _
+__builtin__._ = _
 encoding = sys.getfilesystemencoding()
 
 import wx
@@ -6158,8 +6160,8 @@ class MainFrame(wxp.Frame):
         if os.name == 'nt':
             try:
                 # Get the avisynth directory from the registry
-                key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 'Software\\AviSynth')
-                value = os.path.expandvars(winreg.EnumValue(key, 0)[1])
+                key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, 'Software\\AviSynth')
+                value = os.path.expandvars(_winreg.EnumValue(key, 0)[1])
                 if os.path.isdir(value):
                     self.defaultavisynthdir = value
                 else:
@@ -6182,8 +6184,8 @@ class MainFrame(wxp.Frame):
                     os.path.join('%avisynthdir%', 'plugins64' if self.x86_64 else 'plugins'))
             try:
                 # Get the plugins directory from the registry (current user, only AviSynth 2.6)
-                key = winreg.OpenKey(winreg.HKEY_CURRENT_USER, 'Software\\AviSynth')
-                value = os.path.expandvars(winreg.QueryValueEx(key, 'plugindir2_5')[0])
+                key = _winreg.OpenKey(_winreg.HKEY_CURRENT_USER, 'Software\\AviSynth')
+                value = os.path.expandvars(_winreg.QueryValueEx(key, 'plugindir2_5')[0])
                 if os.path.isdir(value):
                     self.options['pluginsdir'] = self.ExpandVars(value, False, '%pluginsdir%')
                 else:
@@ -6192,8 +6194,8 @@ class MainFrame(wxp.Frame):
             except WindowsError:
                 try:
                     # Get the plugins directory from the registry (local machine, AviSynth 2.5-2.6)
-                    key = winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, 'Software\\AviSynth')
-                    value = os.path.expandvars(winreg.QueryValueEx(key, 'plugindir2_5')[0])
+                    key = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, 'Software\\AviSynth')
+                    value = os.path.expandvars(_winreg.QueryValueEx(key, 'plugindir2_5')[0])
                     if os.path.isdir(value):
                         self.options['pluginsdir'] = self.ExpandVars(value, False, '%pluginsdir%')
                     else:
@@ -10034,7 +10036,7 @@ class MainFrame(wxp.Frame):
             ret = wx.MessageBox('%s\n\n%s' % (s1, s2), _('Warning'), wx.YES_NO|wx.ICON_EXCLAMATION)
             if ret == wx.YES:
                 try:
-                    restore = 'avsp' in winreg.QueryValue(winreg.HKEY_CLASSES_ROOT, 'avsfile\\shell\\Open\\command').lower()
+                    restore = 'avsp' in _winreg.QueryValue(_winreg.HKEY_CLASSES_ROOT, 'avsfile\\shell\\Open\\command').lower()
                 except WindowsError:
                     restore = False
                 ret = wx.MessageBox((_('Disassociate avs files for all users?') if restore else _('Associate avs files for all users?')) + 
