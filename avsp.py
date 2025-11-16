@@ -7091,7 +7091,8 @@ class MainFrame(wxp.Frame):
         #~ mdc.SetBackground(wx.Brush(wx.Colour(90, 90, 90)))
         #~ mdc.Clear()
         #~ mdc = None
-        bmpShow.SetMask(wx.Mask(bmpMask))
+        # Create mask from colour (wxPython 4.x compatible)
+        bmpShow.SetMask(wx.Mask(bmpMask, wx.WHITE))
         bmpHide = bmpShow.ConvertToImage().Mirror().ConvertToBitmap()
         self.toggleSliderWindowButton = wxButtons.GenBitmapButton(self.videoPane, wx.ID_ANY, bmpHide, size=(w,h), style=wx.NO_BORDER)
         self.toggleSliderWindowButton.bmpShow = bmpShow
