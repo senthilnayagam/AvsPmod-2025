@@ -51,8 +51,7 @@ if os.name == 'nt':
         else:
             print('Using AviSynth from PATH')
     path = os.path.join(directory, 'avisynth.dll')
-    if isinstance(path, str): # fix for https://bugs.python.org/issue29082
-        path = path.encode('mbcs')
+    # Python 3: ctypes.WinDLL expects str, not bytes
     avidll = ctypes.WinDLL(path)
     FUNCTYPE = ctypes.WINFUNCTYPE
 else:
