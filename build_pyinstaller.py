@@ -109,14 +109,15 @@ def run_pyinstaller(clean=False, use_upx=False):
     """Run PyInstaller to create executable"""
     print("\n🔨 Building executable with PyInstaller...")
     
+    # Note: UPX setting is controlled in avspmod.spec file
+    if use_upx:
+        print("   ⚠️  UPX compression controlled by avspmod.spec")
+    
     # Build command
     cmd = [sys.executable, '-m', 'PyInstaller']
     
     if clean:
         cmd.append('--clean')
-    
-    if not use_upx:
-        cmd.append('--noupx')
     
     cmd.append('avspmod.spec')
     

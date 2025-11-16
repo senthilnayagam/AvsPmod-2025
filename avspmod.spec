@@ -100,7 +100,7 @@ a = Analysis(
         'PIL',  # If not used
         'unittest',
         'test',
-        'distutils',
+        # Note: distutils removed from excludes as it's needed by setuptools
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
@@ -120,7 +120,7 @@ exe = EXE(
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
-    upx=True,  # Compress with UPX if available
+    upx=False,  # Compress with UPX (set to False if UPX not available)
     console=False,  # GUI application, no console window
     disable_windowed_traceback=False,
     argv_emulation=False,
@@ -139,7 +139,7 @@ coll = COLLECT(
     a.zipfiles,
     a.datas,
     strip=False,
-    upx=True,
+    upx=False,  # Set to True if UPX is installed
     upx_exclude=[],
     name='AvsPmod',
 )

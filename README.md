@@ -67,27 +67,87 @@ enhancements to AvsP:
 - Bookmark titles
 - Improved macro API with several scripts included
 - Native *nix support through AvxSynth
-- Codebase updated to Python 2.7 and wxPython 2.8
+- **🆕 Python 3.14 support (2025 migration)**
+- **🆕 wxPython 4.2 (Phoenix) support**
+- **🆕 Full Unicode filename support**
+- **🆕 Modern PyInstaller-based builds**
 - Many bug fixes
+
+
+Python 3.14 Migration (2025)
+----------------------------
+
+AvsPmod has been successfully migrated to Python 3.14! This modernization brings:
+
+- ✅ Python 3.14 compatibility (tested with 3.12+)
+- ✅ wxPython 4.2 (Phoenix) support
+- ✅ Full UTF-8 encoding throughout
+- ✅ Unicode filename support (Japanese, Chinese, emoji, etc.)
+- ✅ Modern build system using PyInstaller
+- ✅ Improved stability and performance
+
+**For detailed migration information, see:**
+- `MIGRATION_COMPLETE.md` - Complete migration summary
+- `PHASE5_BUILD_SYSTEM.md` - Build system documentation
 
 
 Running AvsPmod
 ---------------
 
-AviSynth, AviSynth+ (Windows) or AvxSynth (*nix) is required.  When 
-not using the AvsPmod builds, currently only supplied for Windows, 
-the following is also needed:
+### Requirements
 
-- Python 2.6-2.7
+AviSynth, AviSynth+ (Windows) or AvxSynth (*nix) is required.
+
+### Using Pre-built Binaries (Windows)
+
+1. Download the latest release from [Releases](https://github.com/senthilnayagam/AvsPmod-2025/releases)
+2. Extract the ZIP file
+3. Run `AvsPmod.exe`
+4. No Python installation required!
+
+### Running from Source
+
+When not using the pre-built binaries, you'll need:
+
+**Python 3.12+ version (Current, Recommended):**
+- Python 3.12 or later (3.14 recommended)
+- wxPython 4.2+
+- cffi 1.16+ (for AviSynth+ x86-64 on Windows)
+
+**Python 2.7 version (Legacy, Deprecated):**
+- Python 2.6-2.7 ⚠️ **No longer maintained**
 - wxPython 2.8-2.9
-- Additionally for AviSynth+ x86-64 (Windows):
-    - cffi module
-    - pycparser module
-    - Visual Studio 2008
-    - avisynth_c.h
+- cffi module (for x64 AviSynth+)
+- Visual Studio 2008
+- avisynth_c.h
 
-In that case start AvsPmod by running avsp.py, i.e. `python -O avsp.py`, 
-pythonw recommended on Windows.
+### Quick Start (Python 3.12+)
+
+```bash
+# Clone the repository
+git clone https://github.com/senthilnayagam/AvsPmod-2025.git
+cd AvsPmod-2025
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run AvsPmod
+python run.py
+```
+
+### Building from Source
+
+```bash
+# Install build dependencies
+pip install pyinstaller
+
+# Build standalone executable
+python build_pyinstaller.py --clean --zip
+
+# Executable will be in: dist/AvsPmod/AvsPmod.exe
+```
+
+For detailed build instructions, see `PHASE5_BUILD_SYSTEM.md`.
 
 
 Updating to a new version
