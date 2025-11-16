@@ -1,0 +1,30 @@
+# Python 3.14 Requirements for AvsPmod
+
+# Core GUI Framework
+wxPython>=4.2.0
+
+# CFFI for AviSynth bindings (64-bit)
+cffi>=1.16.0
+pycparser>=2.21
+
+# Build and Distribution
+PyInstaller>=6.0.0
+setuptools>=68.0.0
+wheel>=0.41.0
+
+# Development Tools
+pytest>=7.4.0
+pytest-cov>=4.1.0
+black>=23.7.0
+flake8>=6.1.0
+isort>=5.12.0
+mypy>=1.5.0
+
+# Code Modernization
+pyupgrade>=3.10.0
+
+# Optional: Enhanced functionality
+pillow>=10.0.0  # Image handling
+
+# Platform-specific
+pywin32>=306; platform_system == "Windows"
