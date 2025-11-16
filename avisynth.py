@@ -276,6 +276,9 @@ class AVS_ScriptEnvironment(object):
                                 ctypes.byref(userdata))
     
     def function_exists(self, name):
+        # Convert name to bytes for ctypes.c_char_p
+        if isinstance(name, str):
+            name = name.encode('utf-8')
         return avs_function_exists(self, name)
     
     def get_var(self, name, type=False):
