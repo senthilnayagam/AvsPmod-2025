@@ -68,7 +68,7 @@ import glob
 import urllib.request as urllib2
 import urllib.error
 import urllib.parse
-import cgi
+import html
 if os.name == 'nt':
     import winreg as _winreg
 from hashlib import md5
@@ -103,7 +103,7 @@ from icons import AvsP_icon, next_icon, play_icon, pause_icon, external_icon, \
 
 
 # Filter database for each tab
-class AvsFilterDict(collections.MutableMapping):
+class AvsFilterDict(collections.abc.MutableMapping):
     
     def __init__(self, shared_dict=None, own_dict=None):
         self.shared_dict = shared_dict or {}
@@ -250,7 +250,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         self.AutoCompSetChooseSingle(0)
         self.AutoCompSetCancelAtStart(1)
         self.AutoCompSetSeparator(ord('\n'))
-        self.AutoCompStops_chars = ''' `~!@#$%^&*()+=[]{};:'",<.>/?\|'''
+        self.AutoCompStops_chars = r''' `~!@#$%^&*()+=[]{};:'",<.>/?\|'''
         # Margin options
         #~ self.SetMarginType(0, stc.STC_MARGIN_NUMBER)
         self.SetMarginWidth(0, self.initialMarginWidth)
@@ -1698,7 +1698,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             if not ext_css and style_name not in css:
                 css[style_name] = self.GenerateCSSBlock(style_name, default_css, 
                                                         monospaced=monospaced)
-            text = cgi.escape(self.GetTextRange(style_start, pos), True)
+            text = html.escape(self.GetTextRange(style_start, pos), True)
             if style_name != 'default':
                 text = '<span class="{0}">{1}</span>'.format(style_name, text)
             body.append(text)
@@ -1710,8 +1710,8 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
                '\n'.join(list(css.values()))
         
         # Generate the head, inserting the css if required
-        title = cgi.escape(title or _('AviSynth script'), True)
-        generator = cgi.escape('{0} v{1}'.format(global_vars.name, 
+        title = html.escape(title or _('AviSynth script'), True)
+        generator = html.escape('{0} v{1}'.format(global_vars.name, 
                                global_vars.version), True)
         if ext_css:
             head_css = '<link rel="stylesheet" type="text/css" '\
@@ -3581,7 +3581,7 @@ class AvsFunctionDialog(wx.Dialog):
                     wx.MessageBox(_('Filter name already exists!'), _('Error'), style=wx.OK|wx.ICON_ERROR)
                     textCtrl0.SetFocus()
                     return
-                if not newName or newName[0].isdigit() or re.findall('\W', newName):
+                if not newName or newName[0].isdigit() or re.findall(r'\W', newName):
                     wx.MessageBox(_('Invalid filter name!'), _('Error'), style=wx.OK|wx.ICON_ERROR)
                     textCtrl0.SetFocus()
                     return
@@ -5761,7 +5761,7 @@ class MainFrame(wxp.Frame):
         mono = ('monospace', 'Courier New')[index]
         mono2 = ('monospace', 'Fixedsys')[index]
         other = ('sans', 'Comic Sans MS')[index]
-        rgb = tuple([(x+255)/2 for x in wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE).Get()])
+        rgb = tuple([(x+255)//2 for x in wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE).Get()])
         solarized_base03 = '#002b36'
         solarized_base02 = '#073642'
         solarized_base01 = '#586e75'
@@ -5840,7 +5840,7 @@ class MainFrame(wxp.Frame):
                 'highlight': 'fore:#000000,back:#C0C0C0',                
                 'highlightline': 'back:#E8E8FF',
                 'linenumber': 'face:{mono},fore:#555555,back:#C0C0C0',
-                'foldmargin': 'fore:#555555,back:#%02X%02X%02X' % rgb,
+                'foldmargin': 'fore:#555555,back:#%02X%02X%02X' % (rgb[0], rgb[1], rgb[2]),
                 'scrapwindow': 'face:{mono},size:10,fore:#0000AA,back:#F5EF90',
             },
             # Based, with some minor changes, on Solarized <http://ethanschoonover.com/solarized>
@@ -11567,7 +11567,7 @@ class MainFrame(wxp.Frame):
         else:
             value = 0
         # Update the script
-        newText = re.sub('\[%s(\s*=.*?)*?\]' % label, '[%s=%i]' % (label, value), script.GetText())
+        newText = re.sub(r'\[%s(\s*=.*?)*?\]' % label, '[%s=%i]' % (label, value), script.GetText())
         script.SetText(newText)
         # Update the video
         self.refreshAVI = True
@@ -12609,9 +12609,9 @@ class MainFrame(wxp.Frame):
         return self.regexp.sub(self.re_replace, text)
 
     def cleanToggleTags(self, text):
-        for endtag in re.findall('\[/.*?\]', text):
+        for endtag in re.findall(r'\[/.*?\]', text):
             tagname = endtag[2:-1]
-            expr = re.compile('\[%s(\s*=.*?)*?\].*?\[/%s\]' % (tagname, tagname), re.IGNORECASE|re.DOTALL)
+            expr = re.compile(r'\[%s(\s*=.*?)*?\].*?\[/%s\]' % (tagname, tagname), re.IGNORECASE|re.DOTALL)
             text = expr.sub(self.re_replace2, text)
         return text
     
@@ -15221,10 +15221,10 @@ class MainFrame(wxp.Frame):
             scripttxt = re.sub(r'#.*?\n', r'\n', '%s\n' % scripttxt)
         # Then find any toggle tags
         toggleTags = []
-        for endtag in re.findall('\[/.*?\]', scripttxt):
+        for endtag in re.findall(r'\[/.*?\]', scripttxt):
             tagname = endtag[2:-1]
             #~ expr = re.compile('\[%s(\s*=.*?)*?\].*?\[/%s\]' % (tagname, tagname), re.IGNORECASE|re.DOTALL)
-            expr = re.compile('\[%s.*?\].*?\[/%s\]' % (tagname, tagname), re.IGNORECASE|re.DOTALL)
+            expr = re.compile(r'\[%s.*?\].*?\[/%s\]' % (tagname, tagname), re.IGNORECASE|re.DOTALL)
             try:
                 txt = expr.findall(scripttxt)[0]
                 toggleTags.append((tagname, self.boolToggleTag(txt)))
@@ -15739,7 +15739,7 @@ class MainFrame(wxp.Frame):
         return boolKeep
 
     def _x_re_replaceStrip(self, mo):
-        return ''.join(re.split('\[.*?\]', mo.group()))
+        return ''.join(re.split(r'\[.*?\]', mo.group()))
 
     def createAutoUserSliders(self, script):
         script.sliderWindow.Freeze()
@@ -18778,7 +18778,7 @@ class MainFrame(wxp.Frame):
         def ShowException():
             if __debug__:
                 raise
-            match = re.match('\w+\((?:\d+,)?\s*[\'"](.*)[\'"],?\)$', 
+            match = re.match(r'\w+\((?:\d+,)?\s*[\'"](.*)[\'"],?\)$', 
                              repr(sys.exc_info()[1]).decode('string_escape').decode(encoding))
             message = match.group(1) if match else sys.exc_info()[1]
             extra = ''
