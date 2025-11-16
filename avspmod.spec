@@ -100,7 +100,11 @@ a = Analysis(
         'PIL',  # If not used
         'unittest',
         'test',
-        # Note: distutils removed from excludes as it's needed by setuptools
+        # Exclude setuptools/pkg_resources internals (only needed for building, not runtime)
+        # AvsPmod doesn't use these at runtime
+        'setuptools',
+        'pkg_resources',
+        # Note: distutils kept as some ctypes operations may need it
     ],
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
