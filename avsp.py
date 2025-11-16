@@ -6247,10 +6247,24 @@ class MainFrame(wxp.Frame):
         '''Load avisynth.dll/avxsynth.so'''    
         global avisynth
         exception = path_used = altdir_used = False
+        cffi_fallback_attempted = False
         while True:
             try:
                 if self.x86_64:
-                    import avisynth_cffi as avisynth
+                    # Try CFFI version first (requires avisynth_c.h and compiler)
+                    try:
+                        import avisynth_cffi as avisynth
+                    except OSError as cffi_err:
+                        # CFFI compilation failed (expected without avisynth_c.h/VS2008)
+                        # Fall back to 32-bit avisynth.py which works fine
+                        if not cffi_fallback_attempted:
+                            cffi_fallback_attempted = True
+                            if __debug__:
+                                print("CFFI bindings unavailable (expected), using 32-bit avisynth.py fallback")
+                            import avisynth
+                        else:
+                            # Both CFFI and fallback failed - this is the real error
+                            raise cffi_err
                 else:
                     import avisynth
                 break

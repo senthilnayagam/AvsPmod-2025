@@ -40,7 +40,15 @@ import re
 
 x86_64 = sys.maxsize > 2**32
 if x86_64:
-    import avisynth_cffi as avisynth
+    # Try CFFI version first, fall back to 32-bit avisynth.py
+    try:
+        import avisynth_cffi as avisynth
+    except (OSError, ImportError) as e:
+        # CFFI compilation failed (expected without avisynth_c.h and VS2008)
+        # Use 32-bit avisynth.py which works fine on 64-bit systems
+        if __debug__:
+            print("Note: CFFI bindings unavailable, using avisynth.py (this is normal)")
+        import avisynth
 else:
     import avisynth
 import global_vars
