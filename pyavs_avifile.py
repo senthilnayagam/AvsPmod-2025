@@ -41,7 +41,7 @@ NULL = 0
 streamtypeVIDEO = DWORD(1935960438)
 OF_READ = UINT(0)
 BI_RGB = 0
-GENERIC_WRITE = 0x40000000L
+GENERIC_WRITE = 0x40000000
 CREATE_ALWAYS = 2
 FILE_ATTRIBUTE_NORMAL  = 0x00000080
 
@@ -205,20 +205,20 @@ class AvsClip:
         # Open the avi file
         previewname = MakePreviewScriptFile(script, filename)
         AVIStreamOpenFromFile = AVIStreamOpenFromFileA
-        if type(previewname) == type(u''):
+        if type(previewname) == type(''):
             try:
                 AVIStreamOpenFromFile = AVIStreamOpenFromFileW
             except NameError:
                 pass
         if (AVIStreamOpenFromFile(ctypes.byref(self.pvidstream), previewname, streamtypeVIDEO, 0, OF_READ, NULL)!=0):
             if __debug__:
-                print>>sys.stderr, _("Failed to open the AVI file")
+                print(_("Failed to open the AVI file"), file=sys.stderr)
                 #~ print>>sys.stderr, filename
             #~ AVIFileExit()
             return
         else:
             if __debug__:
-                print "AVI file opened successfully"
+                print("AVI file opened successfully")
             pass
         
         # Read basic data from the avi file
@@ -243,11 +243,11 @@ class AvsClip:
                 AVIStreamRelease(self.pvidstream)
                 if (AVIStreamOpenFromFile(ctypes.byref(self.pvidstream), previewname2, streamtypeVIDEO, 0, OF_READ, NULL)!=0):
                     if __debug__:
-                        print>>sys.stderr, _("Failed to open the AVI file")
+                        print(_("Failed to open the AVI file"), file=sys.stderr)
                     return
                 else:
                     if __debug__:
-                        print "AVI file opened successfully"
+                        print("AVI file opened successfully")
                     pass
                 # Set internal width and height variables appropriately
                 self.Width, self.Height = fitWidth, fitHeight
@@ -275,12 +275,12 @@ class AvsClip:
         if self.pgf==-1:
             AVIStreamRelease(self.pvidstream)
             if __debug__:
-                print>>sys.stderr, _("Failed to open the AVI frame")
+                print(_("Failed to open the AVI frame"), file=sys.stderr)
             #~ AVIFileExit()
             return
         else:
             if __debug__:
-                print "AVI frame opened successfully"
+                print("AVI frame opened successfully")
             pass
             
         self.AVIStreamGetFrameClose = AVIStreamGetFrameClose
@@ -293,7 +293,7 @@ class AvsClip:
     def __del__(self):
         if self.initialized:
             if __debug__:
-                print "Deleting allocated video memory..."
+                print("Deleting allocated video memory...")
             self.AVIStreamGetFrameClose(self.pgf)
             self.AVIStreamRelease(self.pvidstream)
             
@@ -306,7 +306,7 @@ class AvsClip:
             try:
                 self.lpbi = AVIStreamGetFrame(self.pgf, frame) #Grab Data From The AVI Stream
             except WindowsError:
-                print>>sys.stderr, _("Failed to retrieve AVI frame")
+                print(_("Failed to retrieve AVI frame"), file=sys.stderr)
                 return False
             self.pInfo = LONG(self.lpbi)
             self.pBits = LONG(self.lpbi + self.bmih.biSize + self.bmih.biClrUsed * ctypes.sizeof(RGBQUAD))
@@ -428,4 +428,4 @@ class AvsClip:
 if __name__ == '__main__':
     AVI = PyAVIFile("D:\\test.avs")
     AVI.SaveFrame("D:\\test_save_frame.bmp", 100)
-    print "Exit program."
+    print("Exit program.")

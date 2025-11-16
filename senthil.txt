@@ -5,3 +5,10 @@ last release was in 2015.
 I want to run it on latest python release 3.14 
 
 review the project, create agents.md file and create a implementation plan for step by step to make this codebase working
+
+
+
+###############
+
+
+avisynth+ is installed in this folder "C:\Program Files (x86)\AviSynth" and avisynth dll file path is "C:\Windows\SysWOW64\AviSynth.dll"

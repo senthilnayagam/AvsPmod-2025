@@ -35,7 +35,7 @@ import os
 import os.path
 import sys
 import traceback
-import collections
+import collections.abc
 import weakref
 
 # Initialization routines.  Assume AvxSynth/Linux if os.name is not NT.
@@ -47,20 +47,19 @@ except:
 if os.name == 'nt':
     if __debug__:
         if directory:
-            print 'Using a custom AviSynth directory:', directory
+            print('Using a custom AviSynth directory:', directory)
         else:
-            print 'Using AviSynth from PATH'
+            print('Using AviSynth from PATH')
     path = os.path.join(directory, 'avisynth.dll')
-    if isinstance(path, unicode): # fix for https://bugs.python.org/issue29082
-        path = path.encode('mbcs')
+    # Python 3: ctypes.WinDLL expects str, not bytes
     avidll = ctypes.WinDLL(path)
     FUNCTYPE = ctypes.WINFUNCTYPE
 else:
     if __debug__:
         if directory:
-            print 'Using a custom AvxSynth directory:', directory
+            print('Using a custom AvxSynth directory:', directory)
         else:
-            print 'Using AvxSynth from LD_LIBRARY_PATH'
+            print('Using AvxSynth from LD_LIBRARY_PATH')
     path = os.path.join(directory, 'libavxsynth.so')
     avidll = ctypes.CDLL(path)
     FUNCTYPE = ctypes.CFUNCTYPE
@@ -225,21 +224,29 @@ class AVS_ScriptEnvironment(object):
         self.cdata = avs_create_script_environment(version)
         weak_dict[self] = []
     
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_ScriptEnvironment):
             raise TypeError("Wrong argument: AVS_ScriptEnvironment expected")
-        return obj.cdata
+        # Cast integer pointer value to c_void_p for ctypes
+        return ctypes.c_void_p(obj.cdata)
     
     def __del__(self):
-        avs_delete_script_environment(self)
+        if hasattr(self, 'cdata') and self.cdata:
+            avs_delete_script_environment(self)
     
     def invoke(self, name, args=[], arg_names=None):
+        # Convert name to bytes for ctypes.c_char_p
+        if isinstance(name, str):
+            name = name.encode('utf-8')
         if not isinstance(args, AVS_Value):
             args = AVS_Value(args, env=self)
         if not arg_names:
             arg_names = None
         elif isinstance(arg_names, list):
-            arg_names2 = (ctypes.c_char_p * len(arg_names))(*arg_names)
+            # Convert arg_names to bytes as well
+            arg_names_bytes = [n.encode('utf-8') if isinstance(n, str) else n for n in arg_names]
+            arg_names2 = (ctypes.c_char_p * len(arg_names_bytes))(*arg_names_bytes)
             arg_names = ctypes.cast(ctypes.byref(arg_names2), ctypes.POINTER(ctypes.c_char_p))
         ret = AVS_Value(avs_invoke(self, name, args, arg_names), env=self)
         if ret.is_error():
@@ -272,7 +279,7 @@ class AVS_ScriptEnvironment(object):
         return avs_function_exists(self, name)
     
     def get_var(self, name, type=False):
-        if isinstance(name, unicode):
+        if isinstance(name, str):
             # mbcs will replace invalid characters anyway
             name = name.encode(encoding, 'backslashreplace')
         value = AVS_Value(avs_get_var(self, name), env=self)
@@ -308,7 +315,7 @@ class AVS_ScriptEnvironment(object):
         return avs_set_memory_max(self, mem)
     
     def set_working_dir(self, new_dir):
-        if isinstance(new_dir, unicode):
+        if isinstance(new_dir, str):
             new_dir = new_dir.encode(encoding, 'backslashreplace')
         return avs_set_working_dir(self, new_dir)
     
@@ -351,9 +358,11 @@ class AVS_VideoInfo(object):
             string += ', {0}: {1}'.format(field, getattr(self.cdata.contents, field))
         return string
     
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_VideoInfo):
             raise TypeError("Wrong argument: AVS_VideoInfo expected")
+        # Return the cdata pointer directly (already a ctypes pointer)
         return obj.cdata
     
     def has_video(self):
@@ -573,10 +582,12 @@ class AVS_Clip:
         self.cdata = clip
         self._error = None # additional error info
 
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_Clip):
             raise TypeError("Wrong argument: AVS_Clip expected")
-        return obj.cdata
+        # Cast integer pointer value to c_void_p for ctypes
+        return ctypes.c_void_p(obj.cdata)
         
     def copy(self):
         return avs_copy_clip(self)
@@ -653,9 +664,11 @@ class AVS_VideoFrame(object):
     def __init__(self, video_frame):
         self.cdata = video_frame
     
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_VideoFrame):
             raise TypeError("Wrong argument: AVS_VideoFrame expected")
+        # Return the cdata pointer directly (already a ctypes pointer)
         return obj.cdata
     
     def __del__(self):
@@ -733,9 +746,11 @@ class AVS_Value(object):
         if value is not None:
             self.set_value(value, env)
     
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_Value):
-            raise TypeError("Wrong argument: AVS_ScriptEnvironment expected")
+            raise TypeError("Wrong argument: AVS_Value expected")
+        # Return the cdata pointer or struct directly
         return obj.cdata    
     
     def __str__(self):
@@ -750,12 +765,12 @@ class AVS_Value(object):
         if   isinstance(value, bool):       self.set_bool(value)
         elif isinstance(value, int):        self.set_int(value)
         elif isinstance(value, float):      self.set_float(value)
-        elif isinstance(value, basestring): self.set_string(value, env)
+        elif isinstance(value, str): self.set_string(value, env)
         elif isinstance(value, AVS_Clip):   self.set_clip(value)
         elif isinstance(value, AVS_Value):  self.copy_from(value)
         elif isinstance(value, (ctypes._SimpleCData, ctypes.Structure, 
                                 ctypes.Union)):  self.set_cdata(value)
-        elif isinstance(value, collections.Iterable): self.set_array(value)
+        elif isinstance(value, collections.abc.Iterable): self.set_array(value)
         else:
             raise AvisynthError('invalid type: {type}'.format(type=type(value)))
     
@@ -797,7 +812,7 @@ class AVS_Value(object):
     def set_string(self, value, env=None):
         if self.is_defined():
             self.release()
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             value = value.encode(encoding, 'backslashreplace')
         env = env or self.env
         if isinstance(env, AVS_ScriptEnvironment):
@@ -808,7 +823,7 @@ class AVS_Value(object):
     def set_error(self, value, env=None):
         if self.is_defined():
             self.release()
-        if isinstance(value, unicode):
+        if isinstance(value, str):
             value = value.encode(encoding, 'backslashreplace')
         env = env or self.env
         if isinstance(env, AVS_ScriptEnvironment):
@@ -1205,49 +1220,49 @@ AVS_Value.avs_release_value=avs_release_value
 def test():
     
     env = AVS_ScriptEnvironment(3)
-    print 'environment created:', env
+    print('environment created:', env)
     err = env.get_error()
     if err is not None:
-        print 'error:', err
+        print('error:', err)
         return
-    print 'checking for interface 3:', env.check_version(3)
-    print 'checking for interface 33:', env.check_version(33)
-    print env.invoke('VersionString')
+    print('checking for interface 3:', env.check_version(3))
+    print('checking for interface 33:', env.check_version(33))
+    print(env.invoke('VersionString'))
     
-    print '\nsome internal functions...'
+    print('\nsome internal functions...')
     for function_name in env.get_var('$InternalFunctions$').split()[:10]:
         try:
             params = env.get_var('$Plugin!' + function_name + '!Param$')
-        except AvisynthError, err:
+        except AvisynthError as err:
             if str(err) != 'NotFound': raise
         else:
-            print ' ', function_name, params
+            print(' ', function_name, params)
     var_name, value = 'test var', 'some text'
-    print '\nsetting a string variable with value {0}'.format(repr(value))
+    print('\nsetting a string variable with value {0}'.format(repr(value)))
     env.set_var(var_name, value)
-    print 'value retrieved:', repr(env.get_var(var_name)) # check save_string
-    print '\ninvoking...'
+    print('value retrieved:', repr(env.get_var(var_name))) # check save_string
+    print('\ninvoking...')
     try:
 #        ret = env.invoke('Version')
         ret = env.invoke('BlankClip', [100, 200, 300])
 #        ret = env.invoke('Eval', 
 #                         ['assert(false, "assert message")', 'script title'])
-    except AvisynthError, err:
-        print 'error:', env.get_error()
+    except AvisynthError as err:
+        print('error:', env.get_error())
     else:
         if isinstance(ret, AVS_Clip):
             clip = ret
             AVS_Value(AVS_Value(clip, env), env).get_value() # test passing clip
-            print clip.get_video_info()
+            print(clip.get_video_info())
             frame = clip.get_frame(5)
             err = clip.get_error()
             if err:
-                print 'error:', err
+                print('error:', err)
             else:
-                print frame
+                print(frame)
                 frame.get_read_ptr()[0:20]
         else:
-            print 'value:', ret
+            print('value:', ret)
     
 if __name__ == '__main__':
     test()

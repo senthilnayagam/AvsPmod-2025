@@ -55,19 +55,40 @@
 ### Prerequisites
 ```bash
 # Install Python 3.14 (or 3.12+)
-python --version  # Should show 3.14.x
+python --version  # Should show 3.14.x or 3.12+
 
 # Install Git
 git --version
 ```
 
-### Quick Start (5 minutes)
+### Quick Start with UV (Recommended - Fast!)
+
+**UV is a blazingly fast Python package installer (10-100x faster than pip)**
+
+```bash
+# 1. Install UV
+# PowerShell:
+irm https://astral.sh/uv/install.ps1 | iex
+
+# 2. Run the automated setup script
+.\setup-uv.ps1
+
+# That's it! The script will:
+# - Install Python 3.14 (or 3.12)
+# - Create virtual environment
+# - Install all dependencies
+# - Verify everything works
+```
+
+**See [SETUP_UV.md](SETUP_UV.md) for detailed UV setup instructions**
+
+### Quick Start (Traditional Method)
 
 ```bash
 # 1. Navigate to project
 cd c:\Users\senth\code\AvsPmod-2025
 
-# 2. Create virtual environment
+# 2. Create virtual environment (traditional)
 python -m venv venv-py314
 
 # 3. Activate it
@@ -81,7 +102,7 @@ pip install -r requirements.txt
 git checkout -b python3-migration
 ```
 
-### First Steps
+### Verify Installation
 
 ```bash
 # Run 2to3 analysis (don't apply yet)
