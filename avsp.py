@@ -3168,7 +3168,7 @@ def GenerateMacroReadme(file=None):
         dir = os.path.dirname(file)
         if not os.path.isdir(dir):
             os.makedirs(dir)
-        file = open(file, 'w')
+        file = open(file, 'w', encoding='utf-8')
         file.write(doc)
         file.close()
     return doc
@@ -3900,7 +3900,7 @@ class AvsFunctionDialog(wx.Dialog):
         if filename.startswith('http'):
             f = urllib.request.urlopen(filename)
         else:
-            f = open(filename)
+            f = open(filename, encoding='utf-8')
         text = '\n'.join([line.strip() for line in f.readlines()])
         f.close()
         if filename.endswith('.md'):
@@ -6350,7 +6350,7 @@ class MainFrame(wxp.Frame):
         self.avsmiscwords = ['__end__']
         if os.path.isfile(self.filterdbfilename):
             try:
-                with open(self.filterdbfilename, mode='r') as f:
+                with open(self.filterdbfilename, mode='r', encoding='utf-8') as f:
                     text = '\n'.join([line.strip() for line in f.readlines()])
                 for section in text.split('\n\n['): # TODO: merge AvsFunctionDialog.ParseCustomizations and this
                     title, data = section.split(']\n',1)
@@ -6495,7 +6495,7 @@ class MainFrame(wxp.Frame):
                 else:
                     line = propername+args+'\n\n'
             lines.append(line)
-        f = open(filename, 'w')
+        f = open(filename, 'w', encoding='utf-8')
         f.writelines(lines)
         f.close()
 
@@ -10102,7 +10102,7 @@ class MainFrame(wxp.Frame):
                         os.system('regini "{f}" & del "{f}"'.format(f=f.name))
         else:
             app_file = os.path.join(tempfile.gettempdir(), global_vars.name.lower() + '.desktop')
-            with open(app_file, 'w') as f:
+            with open(app_file, 'w', encoding='utf-8') as f:
                 txt = textwrap.dedent('''\
                 [Desktop Entry]
                 Version=1.0
@@ -10124,7 +10124,7 @@ class MainFrame(wxp.Frame):
                           'xdg-mime default {1} text/x-avisynth'.format(app_file, text_editor))
             else:
                 mime_file = os.path.join(tempfile.gettempdir(), 'avisynth.xml')
-                with open(mime_file, 'w') as f:
+                with open(mime_file, 'w', encoding='utf-8') as f:
                     txt = textwrap.dedent('''\
                     <?xml version="1.0"?>
                     <mime-info xmlns='http://www.freedesktop.org/standards/shared-mime-info'>
@@ -12663,7 +12663,7 @@ class MainFrame(wxp.Frame):
                 html, css = html
                 with open(os.path.join(dirname, ext_css), 'w') as f:
                     f.write(css.encode('utf-8'))
-            with open(filename, 'w') as f:
+            with open(filename, 'w', encoding='utf-8') as f:
                 f.write(html.encode('utf-8'))
     
     def LoadSession(self, filename=None, saverecentdir=True, resize=True, backup=False, startup=False):
@@ -14392,7 +14392,7 @@ class MainFrame(wxp.Frame):
                     optionsFilterDocpaths = dict([(k,v[2]) for k,v in list(tempDict.items())])
                     optionsFilterTypes = dict([(k,v[3]) for k,v in list(tempDict.items())])
                 elif ext == '.txt':
-                    f = open(filename, mode='r')
+                    f = open(filename, mode='r', encoding='utf-8')
                     text = f.read()
                     f.close()
                     filterInfoList = text.split('\n\n')
@@ -14441,7 +14441,7 @@ class MainFrame(wxp.Frame):
                         for key in keys:
                             textlines.append(key+dataDict[key][0].split('\n\n')[0])
                             textlines.append('')
-                        f = open(filename, 'w')
+                        f = open(filename, 'w', encoding='utf-8')
                         f.write('\n'.join(textlines))
                         f.close()
                 else:
@@ -17254,7 +17254,7 @@ class MainFrame(wxp.Frame):
                                 f.write(export)
     
     def getMacrosLabelFromFile(self, filename):
-        f = open(filename)
+        f = open(filename, encoding='utf-8')
         text = f.readline().strip('#').strip()
         f.close()
         return text
@@ -18810,7 +18810,7 @@ class MainFrame(wxp.Frame):
             try:
                 #~ execfile(macrofilename, {'avsp':AvsP_functions}, {})
                 # Read the macro text
-                f = open(macrofilename)
+                f = open(macrofilename, encoding='utf-8')
                 #~ macroLines = f.readlines()
                 txt = f.read()
                 f.close()
@@ -18917,4 +18917,9 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+
+
 

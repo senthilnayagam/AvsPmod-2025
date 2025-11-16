@@ -238,7 +238,7 @@ class StdoutStderrWindow:
                 wx.CallAfter(self.text.AppendText, text)
             else:
                 self.text.AppendText(text)
-        f = open(self.logfilename, 'a')
+        f = open(self.logfilename, 'a', encoding='utf-8')
         if self.firstTime:
             f.write('\n[%s]\n' % time.asctime())
             self.firstTime = False
