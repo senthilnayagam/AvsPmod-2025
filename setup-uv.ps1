@@ -9,7 +9,7 @@ Write-Host "[1/6] Checking UV installation..." -ForegroundColor Yellow
 if (!(Get-Command uv -ErrorAction SilentlyContinue)) {
     Write-Host "  UV not found. Installing UV..." -ForegroundColor Cyan
     try {
-        irm https://astral.sh/uv/install.ps1 | iex
+        Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
         # Refresh PATH
         $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
         Write-Host "  UV installed successfully!" -ForegroundColor Green
