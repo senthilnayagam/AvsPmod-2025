@@ -35,7 +35,7 @@ import os
 import os.path
 import sys
 import traceback
-import collections
+import collections.abc
 import weakref
 
 # Initialization routines.  Assume AvxSynth/Linux if os.name is not NT.
@@ -224,21 +224,29 @@ class AVS_ScriptEnvironment(object):
         self.cdata = avs_create_script_environment(version)
         weak_dict[self] = []
     
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_ScriptEnvironment):
             raise TypeError("Wrong argument: AVS_ScriptEnvironment expected")
-        return obj.cdata
+        # Cast integer pointer value to c_void_p for ctypes
+        return ctypes.c_void_p(obj.cdata)
     
     def __del__(self):
-        avs_delete_script_environment(self)
+        if hasattr(self, 'cdata') and self.cdata:
+            avs_delete_script_environment(self)
     
     def invoke(self, name, args=[], arg_names=None):
+        # Convert name to bytes for ctypes.c_char_p
+        if isinstance(name, str):
+            name = name.encode('utf-8')
         if not isinstance(args, AVS_Value):
             args = AVS_Value(args, env=self)
         if not arg_names:
             arg_names = None
         elif isinstance(arg_names, list):
-            arg_names2 = (ctypes.c_char_p * len(arg_names))(*arg_names)
+            # Convert arg_names to bytes as well
+            arg_names_bytes = [n.encode('utf-8') if isinstance(n, str) else n for n in arg_names]
+            arg_names2 = (ctypes.c_char_p * len(arg_names_bytes))(*arg_names_bytes)
             arg_names = ctypes.cast(ctypes.byref(arg_names2), ctypes.POINTER(ctypes.c_char_p))
         ret = AVS_Value(avs_invoke(self, name, args, arg_names), env=self)
         if ret.is_error():
@@ -350,9 +358,11 @@ class AVS_VideoInfo(object):
             string += ', {0}: {1}'.format(field, getattr(self.cdata.contents, field))
         return string
     
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_VideoInfo):
             raise TypeError("Wrong argument: AVS_VideoInfo expected")
+        # Return the cdata pointer directly (already a ctypes pointer)
         return obj.cdata
     
     def has_video(self):
@@ -572,10 +582,12 @@ class AVS_Clip:
         self.cdata = clip
         self._error = None # additional error info
 
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_Clip):
             raise TypeError("Wrong argument: AVS_Clip expected")
-        return obj.cdata
+        # Cast integer pointer value to c_void_p for ctypes
+        return ctypes.c_void_p(obj.cdata)
         
     def copy(self):
         return avs_copy_clip(self)
@@ -652,9 +664,11 @@ class AVS_VideoFrame(object):
     def __init__(self, video_frame):
         self.cdata = video_frame
     
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_VideoFrame):
             raise TypeError("Wrong argument: AVS_VideoFrame expected")
+        # Return the cdata pointer directly (already a ctypes pointer)
         return obj.cdata
     
     def __del__(self):
@@ -732,9 +746,11 @@ class AVS_Value(object):
         if value is not None:
             self.set_value(value, env)
     
-    def from_param(obj):
+    @classmethod
+    def from_param(cls, obj):
         if not isinstance(obj, AVS_Value):
-            raise TypeError("Wrong argument: AVS_ScriptEnvironment expected")
+            raise TypeError("Wrong argument: AVS_Value expected")
+        # Return the cdata pointer or struct directly
         return obj.cdata    
     
     def __str__(self):
@@ -754,7 +770,7 @@ class AVS_Value(object):
         elif isinstance(value, AVS_Value):  self.copy_from(value)
         elif isinstance(value, (ctypes._SimpleCData, ctypes.Structure, 
                                 ctypes.Union)):  self.set_cdata(value)
-        elif isinstance(value, collections.Iterable): self.set_array(value)
+        elif isinstance(value, collections.abc.Iterable): self.set_array(value)
         else:
             raise AvisynthError('invalid type: {type}'.format(type=type(value)))
     
