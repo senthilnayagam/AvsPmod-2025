@@ -3082,7 +3082,7 @@ class ScrapWindow(wx.Dialog):
                       _('All files') + ' (*.*)|*.*')
         initialdir = self.parent.GetProposedPath(only='dir')
         dlg = wx.FileDialog(self,_('Save scrap text'),
-            initialdir, '', filefilter, wx.SAVE | wx.OVERWRITE_PROMPT)
+            initialdir, '', filefilter, wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
         ID = dlg.ShowModal()
         if ID == wx.ID_OK:
             filename = dlg.GetPath()
@@ -3761,7 +3761,7 @@ class AvsFunctionDialog(wx.Dialog):
                           _('AvsP data') + ' (*.dat)|*.dat|' + 
                           _('All files') + ' (*.*)|*.*')
             dlg = wx.FileDialog(self, title, initial_dir, '', filefilter, 
-                                wx.OPEN|wx.MULTIPLE|wx.FILE_MUST_EXIST)
+                                wx.FD_OPEN|wx.FD_MULTIPLE|wx.FD_FILE_MUST_EXIST)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 filenames = dlg.GetPaths()            
@@ -3969,7 +3969,7 @@ class AvsFunctionDialog(wx.Dialog):
         title = _('Save filter customizations')
         initial_dir = self.GetParent().programdir
         filefilter = _('Customization file') + ' (*.txt)|*.txt|' + _('All files') + ' (*.*)|*.*'
-        dlg = wx.FileDialog(self, title, initial_dir, '', filefilter, wx.SAVE|wx.OVERWRITE_PROMPT)
+        dlg = wx.FileDialog(self, title, initial_dir, '', filefilter, wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         ID = dlg.ShowModal()
         if ID == wx.ID_OK:
             filename = dlg.GetPath()
@@ -8777,7 +8777,7 @@ class MainFrame(wxp.Frame):
     def OnMenuEditInsertFilename(self, event):
         filefilter = _('All files') + ' (*.*)|*.*'
         initial_dir = self.GetProposedPath(only='dir')
-        dlg = wx.FileDialog(self, _('Select a file'), initial_dir, '', filefilter, wx.OPEN)
+        dlg = wx.FileDialog(self, _('Select a file'), initial_dir, '', filefilter, wx.FD_OPEN)
         ID = dlg.ShowModal()
         if ID == wx.ID_OK:
             filename = dlg.GetPath()
@@ -12076,7 +12076,7 @@ class MainFrame(wxp.Frame):
                           _('Source files') + ' (%(extlist1)s)|*.%(extlist2)s|' + 
                           _('All files') + ' (*.*)|*.*') %  locals()
             dlg = wx.FileDialog(self,_('Open a script or source'), initial_dir, default_base, 
-                                filefilter, wx.OPEN|wx.FILE_MUST_EXIST|wx.MULTIPLE)
+                                filefilter, wx.FD_OPEN|wx.FD_FILE_MUST_EXIST|wx.FD_MULTIPLE)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 filenames = dlg.GetPaths()
@@ -12405,7 +12405,7 @@ class MainFrame(wxp.Frame):
             filefilter = (_('AviSynth script') + ' (*.avs, *.avsi)|*.avs;*.avsi|' + 
                           _('All files') + ' (*.*)|*.*')
             dlg = wx.FileDialog(self,_('Save current script'),
-                initialdir, initialname, filefilter, wx.SAVE | wx.OVERWRITE_PROMPT)
+                initialdir, initialname, filefilter, wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 filename = dlg.GetPath()
@@ -12693,7 +12693,7 @@ class MainFrame(wxp.Frame):
             initial_dir, initial_base = os.path.split(self.GetProposedPath(index))
             initial_base = os.path.splitext(initial_base)[0] + '.html'
             dlg = wx.FileDialog(self, _('Export HTML'), initial_dir, initial_base, 
-                                filefilter, wx.SAVE | wx.OVERWRITE_PROMPT)
+                                filefilter, wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 filename = dlg.GetPath()
@@ -12719,7 +12719,7 @@ class MainFrame(wxp.Frame):
             if not os.path.isdir(initialdir):
                 initialdir = self.programdir
             dlg = wx.FileDialog(self,_('Load a session'),
-                initialdir, '', filefilter, wx.OPEN)
+                initialdir, '', filefilter, wx.FD_OPEN)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 filename = dlg.GetPath()
@@ -12859,7 +12859,7 @@ class MainFrame(wxp.Frame):
             if not os.path.isdir(initialdir):
                 initialdir = self.programdir
             dlg = wx.FileDialog(self,_('Save the session'),
-                initialdir, '', filefilter, wx.SAVE | wx.OVERWRITE_PROMPT)
+                initialdir, '', filefilter, wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 filename = dlg.GetPath()
@@ -12969,7 +12969,7 @@ class MainFrame(wxp.Frame):
                 maxFilterIndex = len(filefilterList) - 1
                 filefilter = '|'.join(filefilterList)
                 dlg = wx.FileDialog(self,_('Save current frame'), defaultdir, defaultname,
-                    filefilter,wx.SAVE | wx.OVERWRITE_PROMPT,(0,0))
+                    filefilter,wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,(0,0))
                 dlg.SetFilterIndex(min(self.options['imagechoice'], maxFilterIndex))
                 ID = dlg.ShowModal()
                 if ID == wx.ID_OK:
@@ -13297,7 +13297,7 @@ class MainFrame(wxp.Frame):
             default_dir, default_base = (default, '') if os.path.isdir(default) else os.path.split(default)
             initial_dir = default_dir if os.path.isdir(default_dir) else self.GetProposedPath(only='dir')
             dlg = wx.FileDialog(self, _('Insert a source'), initial_dir, default_base, 
-                                filefilter, wx.OPEN|wx.FILE_MUST_EXIST)
+                                filefilter, wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 filename = dlg.GetPath()
@@ -13369,7 +13369,7 @@ class MainFrame(wxp.Frame):
             if not os.path.isdir(initial_dir):
                 initial_dir = self.ExpandVars(self.options['pluginsdir'])
             dlg = wx.FileDialog(self, _('Insert a plugin'), initial_dir, default_base, 
-                                filefilter, wx.OPEN|wx.FILE_MUST_EXIST)
+                                filefilter, wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 filename = dlg.GetPath()
@@ -14416,7 +14416,7 @@ class MainFrame(wxp.Frame):
                 '',
                 '%s|%s' % (_('Filter customization file') + ' (*.tag)|*.tag', 
                            _('Calltip-only text file') + ' (*.txt)|*.txt'),
-                wx.OPEN
+                wx.FD_OPEN
             )
             ID = dlg2.ShowModal()
             if ID == wx.ID_OK:
@@ -14469,7 +14469,7 @@ class MainFrame(wxp.Frame):
                     '',
                     '%s|%s' % (_('Filter customization file') + ' (*.tag)|*.tag', 
                                _('Calltip-only text file') + ' (*.txt)|*.txt'),
-                    wx.SAVE | wx.OVERWRITE_PROMPT
+                    wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT
                 )
                 ID = dlg2.ShowModal()
                 if ID == wx.ID_OK:
@@ -15741,7 +15741,7 @@ class MainFrame(wxp.Frame):
             if not prompt:
                 return False
             filefilter = (_('Executable files') + ' (*.exe)|*.exe|' if os.name == 'nt' else '') + _('All files') + ' (*.*)|*.*'
-            dlg = wx.FileDialog(self, _('Select an external player'), '', '', filefilter, wx.OPEN)
+            dlg = wx.FileDialog(self, _('Select an external player'), '', '', filefilter, wx.FD_OPEN)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 path = dlg.GetPath()
@@ -16852,7 +16852,7 @@ class MainFrame(wxp.Frame):
                 filefilter = '%s|%s|%s' % (s1, s2, s3) #_('AviSynth script (avs, avsi)|*.avs;*.avsi|Source files (%(extlist1)s)|*.%(extlist2)s|All files (*.*)|*.*') %  locals()
             else:
                 filefilter = s3
-            dlg = wx.FileDialog(self,_('Select a file'), initial_dir, '', filefilter, wx.OPEN)
+            dlg = wx.FileDialog(self,_('Select a file'), initial_dir, '', filefilter, wx.FD_OPEN)
             ID = dlg.ShowModal()
             if ID == wx.ID_OK:
                 filename = dlg.GetPath()
@@ -17690,7 +17690,7 @@ class MainFrame(wxp.Frame):
             filefilter = (_('Source files') + ' (%(extlist1)s)|*.%(extlist2)s|' + 
                           _('All files') + ' (*.*)|*.*') %  locals()
         dlg = wx.FileDialog(self, title, initial_dir, default_base, filefilter, 
-                            wx.OPEN|wx.FILE_MUST_EXIST)
+                            wx.FD_OPEN|wx.FD_FILE_MUST_EXIST)
         ID = dlg.ShowModal()
         if ID == wx.ID_OK:
             filename = dlg.GetPath()
@@ -17714,7 +17714,7 @@ class MainFrame(wxp.Frame):
         default_dir, default_base = (default, '') if os.path.isdir(default) else os.path.split(default)
         initial_dir = default_dir if os.path.isdir(default_dir) else self.GetProposedPath(only='dir')
         dlg = wx.FileDialog(self, title, initial_dir, default_base, filefilter, 
-                            wx.SAVE|wx.OVERWRITE_PROMPT)
+                            wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         ID = dlg.ShowModal()
         if ID == wx.ID_OK:
             filename = dlg.GetPath()
