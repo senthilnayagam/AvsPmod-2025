@@ -450,11 +450,13 @@ class Frame(wx.Frame):
             # Special case: submenu
             if handler is None: #not isinstance(handler, FunctionType):
                 submenu = self.createMenu(shortcut, '%s -> %s'% (name, label), shortcutList, oldShortcuts, backup)
-                menu.AppendMenu(wx.ID_ANY, label, submenu, status)
+                # wxPython 4.x: Use AppendSubMenu instead of AppendMenu
+                menu.AppendSubMenu(submenu, label, status)
                 continue
             elif handler == -1:
                 submenu = shortcut #self.createMenu(shortcut, '%s -> %s'% (name, label), shortcutList, oldShortcuts, bindwindow)
-                menu.AppendMenu(wx.ID_ANY, label, submenu, status)
+                # wxPython 4.x: Use AppendSubMenu instead of AppendMenu
+                menu.AppendSubMenu(submenu, label, status)
                 continue
             # Get the id and type (normal, checkbox, radio)
             if attr in (wx.ITEM_CHECK, wx.ITEM_RADIO):

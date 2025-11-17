@@ -5313,7 +5313,8 @@ class MainFrame(wxp.Frame):
         self.separatevideowindow = self.options['separatevideowindow']
         dimensions = self.options.get('dimensions')
         if dimensions is not None and dimensions[0] > 0 and dimensions[1] > 0:
-            self.SetDimensions(*dimensions)
+            # wxPython 4.x: Use SetSize instead of SetDimensions
+            self.SetSize(dimensions[0], dimensions[1], dimensions[2], dimensions[3])
             # Move the window if it's offscreen
             size = self.GetSize()
             pos = self.GetPosition()
@@ -5332,9 +5333,10 @@ class MainFrame(wxp.Frame):
         self.SetWindowStyle(style)
         
         # Drag-and-drop target for main window
-        class MainFrameDropTarget(wx.PyDropTarget):
+        # wxPython 4.x: Use wx.DropTarget instead of wx.PyDropTarget
+        class MainFrameDropTarget(wx.DropTarget):
             def __init__(self, win):
-                wx.PyDropTarget.__init__(self)
+                wx.DropTarget.__init__(self)
                 self.win = win
                 self.textdata = wx.TextDataObject()
                 self.filedata = wx.FileDataObject()
@@ -5359,7 +5361,8 @@ class MainFrame(wxp.Frame):
 
         class ScriptDropTarget(wx.DropTarget):
             def __init__(self, win, app):
-                wx.PyDropTarget.__init__(self)
+                # wxPython 4.x: Use wx.DropTarget instead of wx.PyDropTarget
+                wx.DropTarget.__init__(self)
                 self.win = win
                 self.app = app
                 self.textdata = wx.TextDataObject()
@@ -7031,7 +7034,8 @@ class MainFrame(wxp.Frame):
                 self.ToggleWindowStyle(wx.STAY_ON_TOP)
             dimensions = self.options.get('dimensions2')
             if dimensions is not None and dimensions[0] > 0 and dimensions[1] > 0:
-                self.videoDialog.SetDimensions(*dimensions)
+                # wxPython 4.x: Use SetSize instead of SetDimensions
+                self.videoDialog.SetSize(dimensions[0], dimensions[1], dimensions[2], dimensions[3])
                 # Move the window if it's offscreen
                 size = self.videoDialog.GetSize()
                 pos = self.videoDialog.GetPosition()
