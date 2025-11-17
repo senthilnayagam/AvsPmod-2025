@@ -170,7 +170,8 @@ cd dist\AvsPmod
 ✅ All drag & drop API updates (2 locations)  
 ✅ All menu API updates (2 locations)  
 ✅ All accelerator error handling  
-✅ All icon loading compatibility
+✅ All icon loading compatibility  
+✅ StyledTextCtrl.StartStyling() API update (removed 2nd argument)
 
 ### Overall Progress
 - **Critical Bugs**: 3/3 fixed (100%)
@@ -259,3 +260,37 @@ AvsPmod-2025/
 6. **User testing required** - verify video playback functionality
 
 **Status**: ✅ **READY FOR RELEASE** (pending user acceptance testing)
+
+---
+
+## ⚠️ Important: Video Playback Requirements
+
+### Video Playback Controls Work ONLY When:
+
+1. **AviSynth is installed** on the system (download from http://avisynth.nl/)
+2. **A valid .avs script is open** in the editor
+3. **Video preview is showing** a valid frame (not an error)
+4. **Not at the last frame** of the video
+
+### To Test Video Playback:
+
+```avisynth
+# Create a new tab (File > New Tab)
+# Type this simple test script:
+ColorBars(width=640, height=480)
+
+# Press F5 to refresh the preview
+# You should see color bars
+# Now click the Play button (▶)
+```
+
+### If Play Button Doesn't Work:
+- Make sure AviSynth 2.5+ is installed
+- Check that video preview shows a frame (not an error)
+- Navigate away from the last frame
+- See `PLAYBACK_TROUBLESHOOTING.md` for detailed help
+
+### Alternative: External Player
+- Press **F6** or use the toolbar button
+- Plays your script in VLC, MPC-HC, or any configured player
+- Always works, doesn't require internal preview

@@ -42,8 +42,22 @@
 #     global_vars.py (application info and other shared variables)
 
 import os, sys
+
+# Suppress wxPython sizer flags consistency checks (harmless warnings)
+os.environ['WXSUPPRESS_SIZER_FLAGS_CHECK'] = '1'
+
 if hasattr(sys,'frozen'):
     sys.path.insert(0, os.path.dirname(sys.executable))
     
 import avsp
-avsp.main()
+import traceback
+
+try:
+    avsp.main()
+except Exception as e:
+    print("=" * 80)
+    print("FATAL ERROR - Application crashed:")
+    print("=" * 80)
+    traceback.print_exc()
+    print("=" * 80)
+    input("Press Enter to exit...")

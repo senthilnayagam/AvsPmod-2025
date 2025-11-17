@@ -708,6 +708,28 @@ if os.name == 'nt':
     DrawDibOpen = ctypes.windll.msvfw32.DrawDibOpen
     DrawDibClose = ctypes.windll.msvfw32.DrawDibClose
     DrawDibDraw = ctypes.windll.msvfw32.DrawDibDraw
+    
+    # Python 3: Define argtypes for DrawDibDraw to avoid "wrong type" errors
+    # BOOL DrawDibDraw(HDRAWDIB hdd, HDC hdc, int xDst, int yDst, int dxDst, int dyDst,
+    #                  LPBITMAPINFOHEADER lpbi, LPVOID lpBits, int xSrc, int ySrc, 
+    #                  int dxSrc, int dySrc, UINT wFlags)
+    DrawDibDraw.argtypes = [
+        ctypes.c_void_p,  # HDRAWDIB hdd
+        ctypes.c_void_p,  # HDC hdc
+        ctypes.c_int,     # int xDst
+        ctypes.c_int,     # int yDst
+        ctypes.c_int,     # int dxDst
+        ctypes.c_int,     # int dyDst
+        ctypes.c_void_p,  # LPBITMAPINFOHEADER lpbi
+        ctypes.c_void_p,  # LPVOID lpBits
+        ctypes.c_int,     # int xSrc
+        ctypes.c_int,     # int ySrc
+        ctypes.c_int,     # int dxSrc
+        ctypes.c_int,     # int dySrc
+        ctypes.c_uint     # UINT wFlags
+    ]
+    DrawDibDraw.restype = ctypes.c_bool
+    
     handleDib = [None]
     
     def InitRoutines():
@@ -766,10 +788,18 @@ if os.name == 'nt':
                     pBits = self.pBits
                 else:
                     buf = ctypes.create_string_buffer(self.display_pitch * self.DisplayHeight)
-                    pBits = ctypes.addressof(buf)
-                    ctypes.memmove(pBits, self.pBits, self.display_pitch * (self.DisplayHeight - 1) + row_size)
-                DrawDibDraw(handleDib[0], hdc, offset[0], offset[1], w, h, 
-                            self.pInfo, pBits, 0, 0, w, h, 0)
+                    # Python 3: ctypes.addressof() returns int, but DrawDibDraw needs pointer
+                    # Pass buf directly (it's a ctypes array/pointer) or cast to c_void_p
+                    pBits = ctypes.cast(buf, ctypes.c_void_p)
+                    ctypes.memmove(buf, self.pBits, self.display_pitch * (self.DisplayHeight - 1) + row_size)
+                
+                # Python 3: Ensure all pointers are c_void_p for ctypes compatibility
+                DrawDibDraw(handleDib[0], 
+                           ctypes.c_void_p(hdc), 
+                           offset[0], offset[1], w, h, 
+                           ctypes.cast(self.pInfo, ctypes.c_void_p), 
+                           ctypes.cast(pBits, ctypes.c_void_p), 
+                           0, 0, w, h, 0)
                 return True
 
 

@@ -295,11 +295,17 @@ class AVS_ScriptEnvironment(object):
     def set_var(self, name, value):
         if not isinstance(value, AVS_Value):
             value = AVS_Value(value, self)
+        # Encode name to bytes for Python 3 ctypes c_char_p
+        if isinstance(name, str):
+            name = name.encode('utf-8')
         return avs_set_var(self, name, value)
     
     def set_global_var(self, name, value):
         if not isinstance(value, AVS_Value):
             value = AVS_Value(value, self)
+        # Encode name to bytes for Python 3 ctypes c_char_p
+        if isinstance(name, str):
+            name = name.encode('utf-8')
         return avs_set_global_var(self, name, value)
     
     def new_video_frame_a(self, vi, align=avs.AVS_FRAME_ALIGN):

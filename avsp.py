@@ -302,6 +302,18 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
             pass
         if self.GetLexer() == stc.STC_LEX_CONTAINER:
             self.Bind(stc.EVT_STC_STYLENEEDED, self.OnStyleNeeded)
+    
+    def FindText(self, minPos, maxPos, text, flags=0):
+        """Wrapper for FindText to handle wxPython Phoenix API change.
+        
+        In wxPython Phoenix, FindText returns a tuple (start, end) instead of just start.
+        This wrapper maintains backward compatibility by returning just the start position.
+        """
+        result = super(AvsStyledTextCtrl, self).FindText(minPos, maxPos, text, flags)
+        # In Phoenix, FindText returns a tuple (start, end)
+        if isinstance(result, tuple):
+            return result[0]  # Return just the start position
+        return result  # For older versions, return as-is
 
     def SetUserOptions(self):
         # AviSynth filter information
@@ -2113,7 +2125,7 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         triple_start = None
         # vpy hack, remove when VapourSynth is supported (with a custom Python lexer)
         string_delimiters = ['"', "'"] if self.filename.endswith('.vpy') else '"'
-        self.StartStyling(pos, 31)
+        self.StartStyling(pos)
         while pos <= end:
             ch = chr(self.GetCharAt(pos))
             isEOD = (ch == chr(0))
@@ -3550,7 +3562,7 @@ class AvsFunctionDialog(wx.Dialog):
             font.SetUnderlined(True)
             eachCtrl.SetFont(font)
             eachCtrl.SetForegroundColour(wx.Colour(0,0,255))
-            eachCtrl.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+            eachCtrl.SetCursor(wx.Cursor(wx.CURSOR_HAND))
         def OnArgsEditSliders(event):
             name = textCtrl0.GetValue()
             dlg2 = AvsFilterAutoSliderInfo(dlg, self.GetParent(), name, textCtrl2.GetValue(), title=_('Slider information'))
@@ -10313,7 +10325,7 @@ class MainFrame(wxp.Frame):
         font.SetUnderlined(True)
         link.SetFont(font)
         link.SetForegroundColour(wx.Colour(0,0,255))
-        link.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+        link.SetCursor(wx.Cursor(wx.CURSOR_HAND))
         url = 'http://avisynth.nl/users/qwerpoi/'
         def OnClick(event):
             startfile(url)
@@ -10325,7 +10337,7 @@ class MainFrame(wxp.Frame):
         font.SetUnderlined(True)
         link0.SetFont(font)
         link0.SetForegroundColour(wx.Colour(0,0,255))
-        link0.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+        link0.SetCursor(wx.Cursor(wx.CURSOR_HAND))
         url0 = global_vars.url
         def OnClick0(event):
             startfile(url0)
@@ -10337,7 +10349,7 @@ class MainFrame(wxp.Frame):
         font.SetUnderlined(True)
         link1.SetFont(font)
         link1.SetForegroundColour(wx.Colour(0,0,255))
-        link1.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+        link1.SetCursor(wx.Cursor(wx.CURSOR_HAND))
         url1 = 'http://forum.doom9.org/showthread.php?t=153248'
         def OnClick1(event):
             startfile(url1)
@@ -10351,7 +10363,7 @@ class MainFrame(wxp.Frame):
         font.SetUnderlined(True)
         link2.SetFont(font)
         link2.SetForegroundColour(wx.Colour(0,0,255))
-        link2.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+        link2.SetCursor(wx.Cursor(wx.CURSOR_HAND))
         def OnClick2(event):
             startfile(url2)
         link2.SetToolTip(wx.ToolTip(url2))
@@ -10768,7 +10780,7 @@ class MainFrame(wxp.Frame):
     def OnLeftUpNotebook(self, event):
         if self.scriptNotebook.dragging:
             self.scriptNotebook.dragging = False
-            self.scriptNotebook.SetCursor(wx.StockCursor(wx.CURSOR_DEFAULT))
+            self.scriptNotebook.SetCursor(wx.Cursor(wx.CURSOR_DEFAULT))
             if not self.scriptNotebook.dblClicked:
                 index = self.scriptNotebook.GetSelection()
                 ipage = self.scriptNotebook.HitTest(event.GetPosition())[0]
@@ -10877,10 +10889,9 @@ class MainFrame(wxp.Frame):
             if ipage != wx.NOT_FOUND:
                 self.scriptNotebook.SetCursor(wx.CursorFromImage(dragdrop_cursor.GetImage()))
             else:
-                self.scriptNotebook.SetCursor(wx.StockCursor(wx.CURSOR_NO_ENTRY))
+                self.scriptNotebook.SetCursor(wx.Cursor(wx.CURSOR_NO_ENTRY))
         else:
-            self.scriptNotebook.SetCursor(wx.StockCursor(wx.CURSOR_DEFAULT))
-
+            self.scriptNotebook.SetCursor(wx.Cursor(wx.CURSOR_DEFAULT))
     
     def OnMouseWheelNotebook(self, event):
         '''Rotate between tabs'''
@@ -11143,7 +11154,7 @@ class MainFrame(wxp.Frame):
                 self.ShowVideoFrame()
             videoWindow = self.videoWindow
             videoWindow.CaptureMouse()
-            videoWindow.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+            videoWindow.SetCursor(wx.Cursor(wx.CURSOR_HAND))
             videoWindow.oldPoint = event.GetPosition()
             videoWindow.oldOrigin = videoWindow.GetViewStart()
             if self.getPixelInfo:
@@ -11229,7 +11240,7 @@ class MainFrame(wxp.Frame):
                     videoWindow.Scroll(newOriginX, newOriginY)
                 else:
                     videoWindow.ReleaseMouse()
-                    videoWindow.SetCursor(wx.StockCursor(wx.CURSOR_DEFAULT))
+                    videoWindow.SetCursor(wx.Cursor(wx.CURSOR_DEFAULT))
             elif self.showVideoPixelInfo: #self.options['showvideopixelinfo']:
                 if True:#self.FindFocus() == videoWindow:
                     pixelInfo = self.GetPixelInfo(event, string_=True)
@@ -11255,7 +11266,7 @@ class MainFrame(wxp.Frame):
         videoWindow = self.videoWindow
         if videoWindow.HasCapture():
             videoWindow.ReleaseMouse()
-            videoWindow.SetCursor(wx.StockCursor(wx.CURSOR_DEFAULT))
+            videoWindow.SetCursor(wx.Cursor(wx.CURSOR_DEFAULT))
         event.Skip()
 
     def OnCropDialogSpinTextChange(self, event=None):
@@ -13973,6 +13984,9 @@ class MainFrame(wxp.Frame):
         if line==None or col==None:
             script = self.currentScript
             pos = script.GetCurrentPos()
+            # Handle case where pos might be a tuple (wxPython 4.x compatibility)
+            if isinstance(pos, tuple):
+                pos = pos[0]
             line = script.LineFromPosition(pos)
             col = script.GetColumn(pos)
         line += 1
@@ -14941,7 +14955,7 @@ class MainFrame(wxp.Frame):
                     h = int(vidheight * self.zoomfactor)
                 else:
                     h = pos
-                pos = -(h + 2 * self.yo + 5 + self.mainSplitter.GetSashSize()/2)
+                pos = -(h + 2 * self.yo + 5 + self.mainSplitter.GetSashSize()//2)
             else:
                 if pos is None:
                     if script.AVI is None:
@@ -14952,7 +14966,7 @@ class MainFrame(wxp.Frame):
                     w = int(vidwidth * self.zoomfactor)
                 else:
                     w = pos
-                pos = -(w + 2 * self.xo + 5 + self.mainSplitter.GetSashSize()/2 + 
+                pos = -(w + 2 * self.xo + 5 + self.mainSplitter.GetSashSize()//2 + 
                         self.toggleSliderWindowButton.GetSize()[0])
         return pos
 
@@ -15193,11 +15207,14 @@ class MainFrame(wxp.Frame):
         scripttxt = script.GetStyledText(0, script.GetTextLength())
         styledtxt = []
         for i in range(0, len(scripttxt), 2):
-            style = ord(scripttxt[i+1]) & 31
+            # Python 3: scripttxt is bytes, so scripttxt[i+1] is already an int
+            style = scripttxt[i+1] & 31
+            # Python 3: scripttxt[i] is an int (byte value), compare with byte values
+            char_byte = scripttxt[i]
             if style in script.commentStyle\
-            or (style == script.STC_AVS_DEFAULT and scripttxt[i] in ' \t\n'):
+            or (style == script.STC_AVS_DEFAULT and char_byte in (ord(' '), ord('\t'), ord('\n'))):
                 continue
-            styledtxt.append(scripttxt[i])
+            styledtxt.append(char_byte)
             styledtxt.append(style)
         script_changed = styledtxt != script.previewtxt
         if return_styledtext:
@@ -15352,9 +15369,9 @@ class MainFrame(wxp.Frame):
                 #~ else:
                     #~ splitpos = self.currentScript.lastSplitVideoPos
                 if self.mainSplitter.GetSplitMode() == wx.SPLIT_HORIZONTAL:
-                    h = abs(splitpos) - (2 * self.yo + 5 + self.mainSplitter.GetSashSize()/2)
+                    h = abs(splitpos) - (2 * self.yo + 5 + self.mainSplitter.GetSashSize()//2)
                 else:
-                    w = abs(splitpos) - (2 * self.xo + 5 + self.mainSplitter.GetSashSize()/2 + 
+                    w = abs(splitpos) - (2 * self.xo + 5 + self.mainSplitter.GetSashSize()//2 + 
                                          self.toggleSliderWindowButton.GetSize()[0])
         if h < 4:
             h = None
@@ -15545,30 +15562,36 @@ class MainFrame(wxp.Frame):
                 
                 def playback_timer(id, reserved, factor, reserved1, reserved2):
                     """"Callback for a Windows Multimedia timer"""
-                    if not self.playing_video:
-                        return
-                    if debug_stats:
-                        current_time = time.time()
-                        debug_stats_str = str((current_time - self.previous_time) * 1000)
-                        self.previous_time = current_time
-                    if self.play_drop and self.play_speed_factor != 'max':
-                        frame = self.play_initial_frame
-                        increment = int(round(1000 * (time.time() - self.play_initial_time) / interval)) * factor
+                    try:
+                        if not self.playing_video:
+                            return
                         if debug_stats:
-                            debug_stats_str += ' dropped: ' + str(increment - self.increment - 1)
-                            self.increment = increment
-                    else:
-                        frame = self.currentframenum
-                        increment = 1
-                    if debug_stats:
-                        print(debug_stats_str)
-                    if not AsyncCall(self.ShowVideoFrame, frame + increment, 
-                                     check_playing=True, focus=False).Wait():
-                        return
-                    if self.currentframenum == script.AVI.Framecount - 1:
-                        self.PlayPauseVideo()
-                    else:
-                        wx.Yield()
+                            current_time = time.time()
+                            debug_stats_str = str((current_time - self.previous_time) * 1000)
+                            self.previous_time = current_time
+                        if self.play_drop and self.play_speed_factor != 'max':
+                            frame = self.play_initial_frame
+                            increment = int(round(1000 * (time.time() - self.play_initial_time) / interval)) * factor
+                            if debug_stats:
+                                debug_stats_str += ' dropped: ' + str(increment - self.increment - 1)
+                                self.increment = increment
+                        else:
+                            frame = self.currentframenum
+                            increment = 1
+                        if debug_stats:
+                            print(debug_stats_str)
+                        if not AsyncCall(self.ShowVideoFrame, frame + increment, 
+                                         check_playing=True, focus=False).Wait():
+                            return
+                        if self.currentframenum == script.AVI.Framecount - 1:
+                            self.PlayPauseVideo()
+                        else:
+                            wx.Yield()
+                    except Exception as e:
+                        print(f"Error in playback_timer: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        self.PlayPauseVideo()  # Stop playback on error
                 
                 def WindowsTimer(interval, callback, periodic=True):
                     """High precision timer (1 ms) using Windows Multimedia"""
@@ -15806,7 +15829,7 @@ class MainFrame(wxp.Frame):
 
     def createAutoUserSliders(self, script):
         script.sliderWindow.Freeze()
-        script.sliderSizerNew.Clear(deleteWindows=True)
+        script.sliderSizerNew.Clear(delete_windows=True)
         script.sliderToggleLabels = []
         menuInfoGeneral = [
             (_('Edit filter database'), '', self.OnSliderLabelEditDatabase, ''),
@@ -16279,7 +16302,7 @@ class MainFrame(wxp.Frame):
             parsedInfo = [arg[1:] for arg in argsList]
             return list(zip(sliderTexts, parsedInfo))
         # Create the new sliders
-        script.sliderSizer.Clear(deleteWindows=True)
+        script.sliderSizer.Clear(delete_windows=True)
         for row, args in enumerate(argsList):
             if len(args) == 1:
                 self.addAvsSliderSeparator(script, label=args[0], row=row)
@@ -16346,7 +16369,7 @@ class MainFrame(wxp.Frame):
         maxTxtCtrl = wx.StaticText(parent, wx.ID_ANY, strTemplate % maxValue)
         valTxtCtrl = wx.StaticText(parent, wx.ID_ANY, strTemplate % value)
         valTxtCtrl.SetForegroundColour(wx.BLUE)
-        valTxtCtrl.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+        valTxtCtrl.SetCursor(wx.Cursor(wx.CURSOR_HAND))
         value_formatted = strTemplate % value
         valTxtCtrl.SetToolTip(wx.ToolTip(_('Reset to initial value: %(value_formatted)s') % locals()))
         if isRescaled:
@@ -16364,7 +16387,7 @@ class MainFrame(wxp.Frame):
             valTxtCtrlSizer.Add(valTxtCtrl, 0, wx.EXPAND)
             valTxtCtrlSizer.Add(valTxtCtrl2, 0, wx.EXPAND)
             valTxtCtrl2.SetForegroundColour(wx.RED)
-            valTxtCtrl2.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+            valTxtCtrl2.SetCursor(wx.Cursor(wx.CURSOR_HAND))
             valTxtCtrl2.SetToolTip(wx.ToolTip(_('Reset to initial value: %(value2_formatted)s') % locals()))
         def OnTextLeftDown(event):
             valTxtCtrl.SetLabel(value_formatted)
@@ -16534,7 +16557,7 @@ class MainFrame(wxp.Frame):
         maxTxtCtrl = wx.StaticText(parent, wx.ID_ANY, strTemplate % maxValue)
         valTxtCtrl = wx.StaticText(parent, wx.ID_ANY, strTemplate % value)
         valTxtCtrl.SetForegroundColour(wx.BLUE)
-        valTxtCtrl.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+        valTxtCtrl.SetCursor(wx.Cursor(wx.CURSOR_HAND))
         value_formatted = strTemplate % defaultValue
         valTxtCtrl.SetToolTip(wx.ToolTip(_('Reset to default value: %(value_formatted)s') % locals()))
         def OnTextLeftDown(event):
@@ -16925,7 +16948,7 @@ class MainFrame(wxp.Frame):
 
     def MakeArgNameStaticText(self, parent, labelTxt, filterName, script, argIndex, size=wx.DefaultSize):
         labelTxtCtrl = wx.StaticText(parent, wx.ID_ANY, labelTxt, size=size)
-        labelTxtCtrl.SetCursor(wx.StockCursor(wx.CURSOR_PENCIL))
+        labelTxtCtrl.SetCursor(wx.Cursor(wx.CURSOR_PENCIL))
         labelTxtCtrl.filterName = filterName
         labelTxtCtrl.argName = labelTxt
         labelTxtCtrl.script = script
@@ -17032,7 +17055,7 @@ class MainFrame(wxp.Frame):
             tempsizer.Add(wx.StaticLine(parent), 0, wx.EXPAND|wx.ALIGN_BOTTOM|wx.TOP, border)
         else:
             staticText = wx.StaticText(parent, wx.ID_ANY, ' - '+label)
-            staticText.SetCursor(wx.StockCursor(wx.CURSOR_HAND))
+            staticText.SetCursor(wx.Cursor(wx.CURSOR_HAND))
             def OnLeftDown(event):
                 separator = event.GetEventObject()
                 self.ToggleSliderFold(separator, separator.IsControlsVisible)
@@ -17084,7 +17107,7 @@ class MainFrame(wxp.Frame):
     def createToggleTagCheckboxes(self, script):
         toggleTags = script.toggleTags
         # First remove all old checkboxes
-        script.toggleTagSizer.Clear(deleteWindows=True)
+        script.toggleTagSizer.Clear(delete_windows=True)
         labels = []
         # Then add the new checkboxes
         for tag in toggleTags:
