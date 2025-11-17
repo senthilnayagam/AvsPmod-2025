@@ -5485,6 +5485,7 @@ class MainFrame(wxp.Frame):
         self.play_speed_factor = 1.0
         self.play_drop = True
         self.playing_video = False
+        self.ffplay_process = None  # For external ffplay playback
         self.getPixelInfo = False
         self.sliderOpenString = '[<'
         self.sliderCloseString = '>]'
@@ -9747,16 +9748,113 @@ class MainFrame(wxp.Frame):
         return True
     
     def OnMenuVideoPlay(self, event):
+        """Play video using ffplay external player"""
         try:
             print("DEBUG: OnMenuVideoPlay called")
-            self.PlayPauseVideo()
-            print("DEBUG: PlayPauseVideo completed")
+            self.PlayVideoWithFFPlay()
+            print("DEBUG: PlayVideoWithFFPlay completed")
         except Exception as e:
             print(f"FATAL ERROR in OnMenuVideoPlay: {e}")
             import traceback
             traceback.print_exc()
             wx.MessageBox(f"Error during video playback:\n{e}\n\nCheck console for details.", 
                          "Playback Error", wx.OK | wx.ICON_ERROR)
+    
+    def PlayVideoWithFFPlay(self):
+        """Play the current script using ffplay"""
+        script = self.currentScript
+        if not script or not script.filename:
+            wx.MessageBox(_("Please save the script first"), _("Error"), wx.OK | wx.ICON_ERROR)
+            return
+        
+        # Check if script needs saving
+        if script.GetModify():
+            ret = wx.MessageBox(
+                _("The script has been modified. Save before playing?"),
+                _("Save script?"),
+                wx.YES_NO | wx.CANCEL | wx.ICON_QUESTION
+            )
+            if ret == wx.CANCEL:
+                return
+            elif ret == wx.YES:
+                if not self.SaveScript(script.filename):
+                    return
+        
+        # Find ffplay
+        ffplay_path = self.options.get('ffplaypath', 'ffplay')
+        if not os.path.isfile(ffplay_path):
+            # Try to find ffplay in PATH
+            import shutil
+            ffplay_path = shutil.which('ffplay')
+            if not ffplay_path:
+                wx.MessageBox(
+                    _("ffplay not found. Please install FFmpeg and make sure ffplay is in your PATH.\n\n"
+                      "You can download FFmpeg from: https://ffmpeg.org/download.html"),
+                    _("FFplay not found"),
+                    wx.OK | wx.ICON_ERROR
+                )
+                return
+        
+        # Stop any existing ffplay process
+        if hasattr(self, 'ffplay_process') and self.ffplay_process:
+            try:
+                self.ffplay_process.terminate()
+            except:
+                pass
+        
+        # Build ffplay command
+        # -autoexit: exit when video ends
+        # -window_title: set window title
+        # -fs: fullscreen (optional, remove if not wanted)
+        cmd = [
+            ffplay_path,
+            '-autoexit',
+            '-window_title', f'AvsPmod - {os.path.basename(script.filename)}',
+            script.filename
+        ]
+        
+        print(f"DEBUG: Starting ffplay: {' '.join(cmd)}")
+        
+        # Start ffplay process
+        import subprocess
+        try:
+            self.ffplay_process = subprocess.Popen(
+                cmd,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                creationflags=subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            )
+            print(f"DEBUG: ffplay started with PID {self.ffplay_process.pid}")
+            
+            # Monitor the process in a separate thread
+            def monitor_ffplay():
+                self.ffplay_process.wait()
+                wx.CallAfter(self.OnFFPlayClosed)
+            
+            import threading
+            threading.Thread(target=monitor_ffplay, daemon=True).start()
+            
+        except Exception as e:
+            wx.MessageBox(
+                f"Failed to start ffplay:\n{e}",
+                _("Error"),
+                wx.OK | wx.ICON_ERROR
+            )
+    
+    def OnFFPlayClosed(self):
+        """Called when ffplay process exits"""
+        print("DEBUG: ffplay process closed")
+        self.ffplay_process = None
+    
+    def StopFFPlay(self):
+        """Stop the ffplay process"""
+        if hasattr(self, 'ffplay_process') and self.ffplay_process:
+            try:
+                self.ffplay_process.terminate()
+                print("DEBUG: ffplay process terminated")
+            except Exception as e:
+                print(f"DEBUG: Error terminating ffplay: {e}")
+            self.ffplay_process = None
     
     def OnMenuVideoPlayDecrement(self, event):
         if self.play_speed_factor == 'max':
@@ -11900,6 +11998,8 @@ class MainFrame(wxp.Frame):
         # Stop playback
         if self.playing_video:
             self.PlayPauseVideo()
+        # Stop ffplay if running
+        self.StopFFPlay()
         # Save scripts if necessary
         frame = self.GetFrameNumber()
         previewvisible = self.previewWindowVisible
@@ -14288,8 +14388,13 @@ class MainFrame(wxp.Frame):
             
             # Get color from display
             rgb = dc.GetPixel(x, y)
-            R,G,B = rgb.Get()
-            A = 0
+            # wxPython Phoenix returns RGBA (4 values) instead of RGB (3 values)
+            color_tuple = rgb.Get()
+            if len(color_tuple) == 4:
+                R, G, B, A = color_tuple
+            else:
+                R, G, B = color_tuple
+                A = 0
             hexcolor = '$%02x%02x%02x' % (R,G,B)
             Y = 0.257*R + 0.504*G + 0.098*B + 16
             U = -0.148*R - 0.291*G + 0.439*B + 128
@@ -16823,7 +16928,12 @@ class MainFrame(wxp.Frame):
             self.options['colourdata'] = self.colour_data.ToString()
             with open(self.optionsfilename, mode='wb') as f:
                 pickle.dump(self.options, f, protocol=0)
-            strColor = '$%02x%02x%02x' % colorButton.GetColour().Get()
+            # wxPython Phoenix returns RGBA (4 values) instead of RGB (3 values)
+            color_tuple = colorButton.GetColour().Get()
+            if len(color_tuple) == 4:
+                strColor = '$%02x%02x%02x' % color_tuple[:3]
+            else:
+                strColor = '$%02x%02x%02x' % color_tuple
             self.SetNewAvsValue(colorButton, strColor.upper())
         colorButton.Bind(colourselect.EVT_COLOURSELECT, OnSelectColour)
         def OnRightUpButtonColor(event):

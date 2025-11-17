@@ -64,6 +64,7 @@ class AvsClipBase:
                  fitWidth=None, oldFramecount=240, display_clip=True, reorder_rgb=False, 
                  matrix=['auto', 'tv'], interlaced=False, swapuv=False, bit_depth=None):
         # Internal variables
+        print(f"DEBUG: AvsClipBase.__init__ called, filename={filename}")
         self.initialized = False
         self.name = filename
         self.error_message = None
@@ -116,9 +117,14 @@ class AvsClipBase:
         else:
             if isinstance(script, avisynth.AVS_Clip):
                 raise ValueError("env must be defined when providing a clip") 
+            print("DEBUG: Creating new AVS_ScriptEnvironment...")
             try:
                 self.env = avisynth.AVS_ScriptEnvironment(3)
-            except OSError:
+                print("DEBUG: AVS_ScriptEnvironment created successfully")
+            except OSError as e:
+                print(f"FATAL: Failed to create AVS_ScriptEnvironment: {e}")
+                import traceback
+                traceback.print_exc()
                 return
             if hasattr(self.env, 'get_error'):
                 self.error_message = self.env.get_error()
@@ -767,7 +773,9 @@ if os.name == 'nt':
         
         def _GetFrame(self, frame):
             if AvsClipBase._GetFrame(self, frame):
-                self.bmih.biWidth = self.display_pitch * 8 // self.bmih.biBitCount
+                # biWidth should be the actual display width, not calculated from pitch
+                # The pitch may include padding, but biWidth is the image width in pixels
+                self.bmih.biWidth = self.DisplayWidth
                 return True
             return False
         
@@ -786,18 +794,35 @@ if os.name == 'nt':
                     pBits = self.pBits
                 else:
                     buf = ctypes.create_string_buffer(self.display_pitch * self.DisplayHeight)
-                    # Python 3: ctypes.addressof() returns int, but DrawDibDraw needs pointer
-                    # Pass buf directly (it's a ctypes array/pointer) or cast to c_void_p
-                    pBits = ctypes.cast(buf, ctypes.c_void_p)
+                    pBits = buf
                     ctypes.memmove(buf, self.pBits, self.display_pitch * (self.DisplayHeight - 1) + row_size)
                 
-                # Python 3: Ensure all pointers are c_void_p for ctypes compatibility
-                DrawDibDraw(handleDib[0], 
-                           ctypes.c_void_p(hdc), 
+                # Get actual memory addresses for DrawDibDraw
+                # DrawDibDraw needs integer addresses, not pointer objects
+                if hasattr(pBits, 'contents'):
+                    # It's a ctypes POINTER - convert to integer address
+                    pBits_addr = ctypes.cast(pBits, ctypes.c_void_p).value
+                elif hasattr(pBits, '_b_base_'):
+                    # It's a ctypes array/buffer - get address
+                    pBits_addr = ctypes.addressof(pBits)
+                elif isinstance(pBits, int):
+                    # Already an integer address
+                    pBits_addr = pBits
+                else:
+                    # Try to get the address
+                    pBits_addr = ctypes.cast(pBits, ctypes.c_void_p).value
+                
+                # Get address of BITMAPINFOHEADER
+                pInfo_addr = ctypes.addressof(self.bmih)
+                
+                print(f"DEBUG: Calling DrawDibDraw - frame {frame}, size {w}x{h}")
+                result = DrawDibDraw(handleDib[0], 
+                           hdc, 
                            offset[0], offset[1], w, h, 
-                           ctypes.cast(self.pInfo, ctypes.c_void_p), 
-                           ctypes.cast(pBits, ctypes.c_void_p), 
+                           pInfo_addr, 
+                           pBits_addr, 
                            0, 0, w, h, 0)
+                print(f"DEBUG: DrawDibDraw returned: {result}")
                 return True
 
 
