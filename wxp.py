@@ -662,7 +662,8 @@ class QuickFindDialog(wx.Dialog):
         self.close = wx.BitmapButton(self, id, bitmap=wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK))
         sizer = wx.BoxSizer(wx.HORIZONTAL)
         sizer.Add(find_bitmap, 0, wx.ALIGN_CENTER|wx.ALL, 5)
-        sizer.Add(self.find_text_ctrl, 1, wx.EXPAND|wx.ALIGN_CENTER|wx.TOP|wx.BOTTOM, 5)
+        # wxPython 4.x: Remove ALIGN_CENTER - EXPAND overrides alignment in box sizers
+        sizer.Add(self.find_text_ctrl, 1, wx.EXPAND|wx.TOP|wx.BOTTOM, 5)
         sizer.Add(self.close, 0, wx.ALIGN_CENTER|wx.ALL, 5)
         sizer.Fit(self)
         self.SetSizer(sizer)
@@ -832,8 +833,9 @@ class FindReplaceDialog(wx.Dialog):
         button_sizer.Add(self.replace_all, 0, wx.EXPAND|wx.ALL, 3)
         button_sizer.Add(self.close, 0, wx.EXPAND|wx.ALL, 3)
         col_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        col_sizer.Add(ctrl_sizer, 1, wx.EXPAND|wx.ALIGN_CENTER)
-        col_sizer.Add(button_sizer, 0, wx.EXPAND|wx.ALIGN_CENTER|wx.LEFT, 2)
+        # wxPython 4.x: Remove ALIGN_CENTER - EXPAND overrides alignment in box sizers
+        col_sizer.Add(ctrl_sizer, 1, wx.EXPAND)
+        col_sizer.Add(button_sizer, 0, wx.EXPAND|wx.LEFT, 2)
         
         # Size the elements
         dlgSizer = wx.BoxSizer(wx.VERTICAL)
@@ -1204,7 +1206,8 @@ class OptionsDialog(wx.Dialog):
                             itemSizer.Add(identSizer, 0, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL)
                         else:
                             itemSizer.Add((-1,2), 1, wx.EXPAND)
-                            itemSizer.Add(ctrl, 0, wx.EXPAND|wx.ALIGN_CENTER_VERTICAL|wx.TOP|wx.BOTTOM, 2)
+                            # wxPython 4.x: Remove ALIGN_CENTER_VERTICAL - EXPAND overrides alignment
+                            itemSizer.Add(ctrl, 0, wx.EXPAND|wx.TOP|wx.BOTTOM, 2)
                         
                     elif flag in (OPT_ELEM_SPIN, OPT_ELEM_INT, OPT_ELEM_FLOAT):
                         # numeric field, with arrows to increment and decrement the value
@@ -1227,7 +1230,10 @@ class OptionsDialog(wx.Dialog):
                         if label_position == wx.HORIZONTAL:
                             itemSizer.Add(staticText, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 6)
                             expand_flags = (1, 0) if expand else (0, 0)
-                            itemSizer.Add(ctrl, expand_flags[0], expand_flags[1]|wx.ALIGN_CENTER_VERTICAL|wx.TOP|wx.BOTTOM, 2)
+                            # wxPython 4.x: When expand=True and expand_flags[1]=0, ALIGN_CENTER_VERTICAL is OK
+                            # But for consistency, handle vertical case where expand_flags[1]=EXPAND
+                            align_flag = 0 if expand_flags[1] == wx.EXPAND else wx.ALIGN_CENTER_VERTICAL
+                            itemSizer.Add(ctrl, expand_flags[0], expand_flags[1]|align_flag|wx.TOP|wx.BOTTOM, 2)
                         else:
                             itemSizer.AddStretchSpacer()
                             itemSizer.Add(staticText, 0, wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, 2)
@@ -1260,12 +1266,16 @@ class OptionsDialog(wx.Dialog):
                         if label_position == wx.HORIZONTAL:
                             itemSizer.Add(staticText, 0, wx.ALIGN_CENTER_VERTICAL|wx.RIGHT, 5)
                             expand_flags = (1, 0) if expand else (0, 0)
-                            itemSizer.Add(ctrl, expand_flags[0], expand_flags[1]|wx.ALIGN_CENTER_VERTICAL)
+                            # wxPython 4.x: Remove ALIGN_CENTER_VERTICAL when EXPAND is present
+                            align_flag = 0 if expand_flags[1] == wx.EXPAND else wx.ALIGN_CENTER_VERTICAL
+                            itemSizer.Add(ctrl, expand_flags[0], expand_flags[1]|align_flag)
                         else:
                             itemSizer.AddStretchSpacer()
                             itemSizer.Add(staticText, 0, wx.LEFT|wx.RIGHT|wx.TOP|wx.BOTTOM, 2)
                             expand_flags = (0, wx.EXPAND) if expand else (0, 0)
-                            itemSizer.Add(ctrl, expand_flags[0], expand_flags[1]|wx.ALIGN_CENTER_VERTICAL)
+                            # wxPython 4.x: Remove ALIGN_CENTER_VERTICAL when EXPAND is present
+                            align_flag = 0 if expand_flags[1] == wx.EXPAND else wx.ALIGN_CENTER_VERTICAL
+                            itemSizer.Add(ctrl, expand_flags[0], expand_flags[1]|align_flag)
                             itemSizer.AddStretchSpacer()
                     
                     elif flag in (OPT_ELEM_FILE, OPT_ELEM_FILE_OPEN, OPT_ELEM_FILE_SAVE, OPT_ELEM_FILE_URL):

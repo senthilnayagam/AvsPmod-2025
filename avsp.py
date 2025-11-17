@@ -74,6 +74,7 @@ if os.name == 'nt':
 from hashlib import md5
 import builtins as __builtin__
 import collections
+import collections.abc
 
 if hasattr(sys,'frozen'):
     programdir = os.path.dirname(sys.executable)
@@ -329,7 +330,8 @@ class AvsStyledTextCtrl(stc.StyledTextCtrl):
         # General options
         self.SetUseTabs(self.app.options['usetabs'])
         self.SetTabWidth(self.app.options['tabwidth'])
-        self.SetCaretLineBack(self.app.options['textstyles']['highlightline'].split(':')[1])
+        # wxPython 4.x: SetCaretLineBack() renamed to SetCaretLineBackground()
+        self.SetCaretLineBackground(self.app.options['textstyles']['highlightline'].split(':')[1])
         self.SetCaretLineVisible(self.app.options['highlightline'])
         if self.app.options['wrap']:
             self.SetWrapMode(stc.STC_WRAP_WORD)
@@ -4963,16 +4965,17 @@ class SliderPlus(wx.Panel):
         else:
             dc.SetPen(self.penHandle)
             dc.SetBrush(self.brushHandle)
-        dc.DrawRectangle(pixelpos0, yH, wH, hH)
+        # wxPython 4.x: DrawRectangle requires int arguments, not float
+        dc.DrawRectangle(int(pixelpos0), int(yH), int(wH), int(hH))
         dc.SetPen(self.penHighlight2)
-        dc.DrawLine(pixelpos0, yH, pixelpos0+wH, yH)
-        dc.DrawLine(pixelpos0, yH, pixelpos0, yH+hH)
+        dc.DrawLine(int(pixelpos0), int(yH), int(pixelpos0+wH), int(yH))
+        dc.DrawLine(int(pixelpos0), int(yH), int(pixelpos0), int(yH+hH))
         dc.SetPen(self.penDarkShadow)
-        dc.DrawLine(pixelpos0+wH, yH, pixelpos0+wH, yH+hH)
-        dc.DrawLine(pixelpos0, yH+hH, pixelpos0+wH+1, yH+hH)
+        dc.DrawLine(int(pixelpos0+wH), int(yH), int(pixelpos0+wH), int(yH+hH))
+        dc.DrawLine(int(pixelpos0), int(yH+hH), int(pixelpos0+wH+1), int(yH+hH))
         dc.SetPen(self.penShadow)
-        dc.DrawLine(pixelpos0+wH-1, yH+1, pixelpos0+wH-1, yH+hH)
-        dc.DrawLine(pixelpos0+1, yH+hH-1, pixelpos0+wH, yH+hH-1)
+        dc.DrawLine(int(pixelpos0+wH-1), int(yH+1), int(pixelpos0+wH-1), int(yH+hH))
+        dc.DrawLine(int(pixelpos0+1), int(yH+hH-1), int(pixelpos0+wH), int(yH+hH-1))
         if self.selmode == 1:
             hH2 = hH/2
             border = 3
@@ -7078,14 +7081,16 @@ class MainFrame(wxp.Frame):
         else:
             w = 10
             h = 50
-            bmpMask = wx.EmptyBitmap(w, h)
+            # wxPython 4.x: Use wx.Bitmap() constructor instead of wx.EmptyBitmap()
+            bmpMask = wx.Bitmap(w, h)
             mdc = wx.MemoryDC()
             mdc.SelectObject(bmpMask)
             mdc.DrawPolygon([(8,0), (2,6), (8,12)])
             mdc.DrawPolygon([(8,18), (2,24), (8,30)])
             mdc.DrawPolygon([(8,36), (2,42), (8,48)])
         mdc = None
-        bmpShow = wx.EmptyBitmap(w, h)
+        # wxPython 4.x: Use wx.Bitmap() constructor instead of wx.EmptyBitmap()
+        bmpShow = wx.Bitmap(w, h)
         #~ mdc = wx.MemoryDC()
         #~ mdc.SelectObject(bmpShow)
         #~ mdc.SetBackground(wx.Brush(wx.Colour(90, 90, 90)))
@@ -7100,7 +7105,9 @@ class MainFrame(wxp.Frame):
         def OnTSWButtonSize(event):
             dc = wx.WindowDC(self.toggleSliderWindowButton)
             dc.Clear()
-            wButton, hButton = self.toggleSliderWindowButton.GetClientSizeTuple()
+            # wxPython 4.x: GetClientSizeTuple() replaced by GetClientSize() which returns wx.Size
+            size = self.toggleSliderWindowButton.GetClientSize()
+            wButton, hButton = size.width, size.height
             self.toggleSliderWindowButton.DrawLabel(dc, wButton, hButton)
             event.Skip()
         self.toggleSliderWindowButton.Bind(wx.EVT_SIZE, OnTSWButtonSize)
@@ -7129,8 +7136,9 @@ class MainFrame(wxp.Frame):
         #~ self.videoSplitter.Bind(wx.EVT_LEFT_UP, OnVideoSplitterPosChanged)
 
         self.mainSplitter.SetSplitMode(wx.SPLIT_HORIZONTAL)
-        self.mainSplitter.SetSashSize(4)
-        self.videoSplitter.SetSashSize(4)
+        # SetSashSize() removed in wxPython 4.x (Phoenix)
+        # self.mainSplitter.SetSashSize(4)
+        # self.videoSplitter.SetSashSize(4)
         
         self.programSplitterSize = None
         
@@ -7223,7 +7231,8 @@ class MainFrame(wxp.Frame):
         self.toolbarHeight = spos
         
         if wx.VERSION < (2, 9):
-            self.programSplitter.SetSashSize(0)
+            # SetSashSize() removed in wxPython 4.x (Phoenix)
+            # self.programSplitter.SetSashSize(0)
             self.programSplitter.SplitHorizontally(self.mainSplitter, self.videoControls, -spos)
         
         # Set the minimum pane sizes
@@ -7777,16 +7786,17 @@ class MainFrame(wxp.Frame):
             bmpExternal = bmpExternal.Scale(16,16)
             bmpRight = bmpRight.Scale(16,16)
             bmpSkipRight = bmpSkipRight.Scale(16,16)
-        self.bmpPlay = wx.BitmapFromImage(bmpPlay)
-        self.bmpPause = wx.BitmapFromImage(bmpPause)
-        bmpExternal = wx.BitmapFromImage(bmpExternal)
+        # wxPython 4.x: Use wx.Bitmap() constructor instead of wx.BitmapFromImage
+        self.bmpPlay = wx.Bitmap(bmpPlay)
+        self.bmpPause = wx.Bitmap(bmpPause)
+        bmpExternal = wx.Bitmap(bmpExternal)
         self.bmpRightTriangle = spin_icon.GetBitmap() #wx.BitmapFromImage(play_icon.getImage().Scale(10,10))
         self.bmpLeftTriangle = self.bmpRightTriangle.ConvertToImage().Mirror().ConvertToBitmap()
-        bmpRight = wx.BitmapFromImage(bmpRight)
+        bmpRight = wx.Bitmap(bmpRight)
         bmpLeft = bmpRight.ConvertToImage().Mirror().ConvertToBitmap()
         self.bmpVidUp = self.bmpPlay.ConvertToImage().Rotate90(False).ConvertToBitmap()
         self.bmpVidDown = self.bmpPlay.ConvertToImage().Rotate90().ConvertToBitmap()
-        bmpSkipRight = wx.BitmapFromImage(bmpSkipRight)
+        bmpSkipRight = wx.Bitmap(bmpSkipRight)
         bmpSkipLeft = bmpSkipRight.ConvertToImage().Mirror().ConvertToBitmap()
 
         return (
@@ -8014,14 +8024,17 @@ class MainFrame(wxp.Frame):
             color4 = wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT)
             # Create the mask
             w = h = 15
-            bmpMask = wx.EmptyBitmap(w, h)
+            # wxPython 4.x: Use wx.Bitmap() constructor instead of wx.EmptyBitmap()
+            bmpMask = wx.Bitmap(w, h)
             mdc = wx.MemoryDC()
             mdc.SelectObject(bmpMask)
             mdc.DrawRoundedRectangle(0,0,w,h,3)
             mdc = None
-            mask = wx.Mask(bmpMask)
+            # wxPython 4.x: Use colour parameter for mask
+            mask = wx.Mask(bmpMask, wx.WHITE)
             # Create the bitmap
-            bmpBase = wx.EmptyBitmap(w, h)
+            # wxPython 4.x: Use wx.Bitmap() constructor instead of wx.EmptyBitmap()
+            bmpBase = wx.Bitmap(w, h)
             bmpBase.SetMask(mask)
             mdc = wx.MemoryDC()
             mdc.SelectObject(bmpBase)
@@ -8038,7 +8051,8 @@ class MainFrame(wxp.Frame):
             imageBase = bmpBase.ConvertToImage()
             il = wx.ImageList(w, h)
             for i in range(10):
-                bmp = wx.BitmapFromImage(imageBase)
+                # wxPython 4.x: Use wx.Bitmap() constructor instead of wx.BitmapFromImage
+                bmp = wx.Bitmap(imageBase)
                 mdc = wx.MemoryDC()
                 mdc.SelectObject(bmp)
                 mdc.SetTextForeground(color4)
@@ -8319,7 +8333,8 @@ class MainFrame(wxp.Frame):
         sizer.Add(autocropSizer, 0, wx.ALIGN_CENTER)
         sizer.Add(choiceSizer, 0, wx.TOP|wx.BOTTOM, 10)
         sizer.Add(wx.StaticLine(dlg), 0, wx.EXPAND)
-        sizer.Add(staticText, 0, wx.ALIGN_CENTER|wx.EXPAND|wx.ALL, 5)
+        # wxPython 4.x: Remove ALIGN_CENTER - EXPAND overrides alignment in box sizers
+        sizer.Add(staticText, 0, wx.EXPAND|wx.ALL, 5)
         sizer.Add(buttonSizer, 0, wx.ALIGN_CENTER|wx.ALL, 10)
         dlg.SetSizer(sizer)
         dlg.Fit()
@@ -8418,12 +8433,14 @@ class MainFrame(wxp.Frame):
         # Size the elements
         sizer = wx.BoxSizer(wx.VERTICAL)
         #~ sizer.Add(spinSizer, 0, wx.ALL, 10)
-        sizer.Add(radioBoxTrim, 0, wx.EXPAND|wx.ALIGN_CENTER|wx.ALL, 5)
+        # wxPython 4.x: Remove ALIGN_CENTER from EXPAND items - EXPAND overrides alignment
+        sizer.Add(radioBoxTrim, 0, wx.EXPAND|wx.ALL, 5)
         sizer.Add(checkBox, 0, wx.ALL, 10)
         sizer.Add(dissolveSizer, 0, wx.LEFT|wx.RIGHT|wx.BOTTOM, 10)
         sizer.Add(choiceSizer, 0, wx.ALL, 5)
         sizer.Add(wx.StaticLine(dlg), 0, wx.EXPAND|wx.TOP, 5)
-        sizer.Add(staticText, 0, wx.ALIGN_CENTER|wx.EXPAND|wx.ALL, 5)
+        # wxPython 4.x: Remove ALIGN_CENTER - EXPAND overrides alignment in box sizers
+        sizer.Add(staticText, 0, wx.EXPAND|wx.ALL, 5)
         sizer.Add(buttonSizer, 0, wx.ALIGN_CENTER|wx.ALL, 10)
         dlg.SetSizer(sizer)
         dlg.Fit()
@@ -8434,7 +8451,12 @@ class MainFrame(wxp.Frame):
 
     # Event functions
     def OnClose(self, event):
+        # wxPython 4.x: ExitProgram handles everything including Destroy()
+        # If it returns (user cancelled), we need to veto the close event
         self.ExitProgram()
+        # If we reach here, user cancelled the exit, so veto the close
+        if event.CanVeto():
+            event.Veto()
     
     def OnMenuBar(self, event):
         # tab groups
@@ -8998,7 +9020,7 @@ class MainFrame(wxp.Frame):
         #~ bmenu = self.GetMenuBar().GetMenu(2).FindItemByPosition(1).GetSubMenu()
         #~ framenum = int(bmenu.GetLabel(event.GetId()))
         menuItem = self.GetMenuBar().FindItemById(event.GetId())
-        framenum = int(menuItem.GetLabel().split()[0])
+        framenum = int(menuItem.GetItemLabelText().split()[0])  # wxPython 4.x: GetLabel() -> GetItemLabelText()
         self.ShowVideoFrame(framenum)
         if self.playing_video == '':
             self.PlayPauseVideo()
@@ -9369,7 +9391,7 @@ class MainFrame(wxp.Frame):
                         menuItem = menu.FindItemById(id)
                         if menuItem:
                             menuItem.Check()
-                            label = menuItem.GetLabel()
+                            label = menuItem.GetItemLabelText()
                             zoomvalue = self.zoomLabelDict[label]
                         else:
                             updateMenu = menu
@@ -9381,7 +9403,7 @@ class MainFrame(wxp.Frame):
                     menuItem.Check()
                 else:
                     menuItem.Check()
-                    label = menuItem.GetLabel()
+                    label = menuItem.GetItemLabelText()
                     zoomvalue = self.zoomLabelDict[label]
                     for vidmenu in vidmenus:
                         menu = vidmenu.FindItemById(vidmenu.FindItem(_('&Zoom'))).GetSubMenu()
@@ -9403,7 +9425,7 @@ class MainFrame(wxp.Frame):
                     print(_('Error'), 'OnMenuVideoZoom(): cannot find menu item by id', file=sys.stderr)
                     return
                 menuItem.Check()
-                zoomvalue = self.zoomLabelDict[menuItem.GetLabel()]
+                zoomvalue = self.zoomLabelDict[menuItem.GetItemLabelText()]
             if zoomvalue == 'fill':
                 self.zoomwindow = True
                 self.zoomwindowfit = False
@@ -9449,7 +9471,7 @@ class MainFrame(wxp.Frame):
                 menu = vidmenu.FindItemById(vidmenu.FindItem(_('&Flip'))).GetSubMenu()
                 menuItem = menu.FindItemById(id)
                 if menuItem: 
-                    label = menuItem.GetLabel()
+                    label = menuItem.GetItemLabelText()
                     value = self.flipLabelDict[label]
                     menuItem.Check(value not in self.flip)
                 else:
@@ -9467,7 +9489,7 @@ class MainFrame(wxp.Frame):
             if menuItem is None:
                 print(_('Error'), 'OnMenuVideoFlip(): cannot find menu item by id', file=sys.stderr)
                 return
-            value = self.flipLabelDict[menuItem.GetLabel()]            
+            value = self.flipLabelDict[menuItem.GetItemLabelText()]            
             menuItem.Check(value not in self.flip)
             
         if value in self.flip:
@@ -9485,7 +9507,7 @@ class MainFrame(wxp.Frame):
                 menu = vidmenu.FindItemById(vidmenu.FindItem(_('&YUV -> RGB'))).GetSubMenu()
                 menuItem = menu.FindItemById(id)
                 if menuItem:
-                    label = menuItem.GetLabel()                    
+                    label = menuItem.GetItemLabelText()                    
                     value = self.yuv2rgbDict[label]
                     if menuItem.GetKind() == wx.ITEM_RADIO:
                         menuItem.Check()
@@ -9513,7 +9535,7 @@ class MainFrame(wxp.Frame):
                 menuItem.Check()
             else:
                 menuItem.Check(not self.swapuv)
-            value = self.yuv2rgbDict[menuItem.GetLabel()]
+            value = self.yuv2rgbDict[menuItem.GetItemLabelText()]
         refresh = False
         AVI = self.currentScript.AVI
         if value == 'swapuv':
@@ -9550,7 +9572,7 @@ class MainFrame(wxp.Frame):
             menuItem = menu.FindItemById(id)
             if menuItem:
                 menuItem.Check()
-                label = menuItem.GetLabel()
+                label = menuItem.GetItemLabelText()
                 if label == _('Stacked yuv420p10 or yuv444p10'):
                     self.bit_depth = 's10'
                 elif label == _('Stacked yuv420p16 or yuv444p16'):
@@ -9594,7 +9616,7 @@ class MainFrame(wxp.Frame):
             menuItem = menu.FindItemById(id)
             if menuItem:
                 menuItem.Check()
-                label = menuItem.GetLabel()
+                label = menuItem.GetItemLabelText()
                 if label == _('Default'):
                     self.options['use_customvideobackground'] = False
                 else:
@@ -10185,7 +10207,7 @@ class MainFrame(wxp.Frame):
                 if old != new:
                     menuString, shortcut, id = new
                     menuItem = self.GetMenuBar().FindItemById(id)
-                    label = menuItem.GetLabel()
+                    label = menuItem.GetItemLabelText()
                     if shortcut != '':
                         shortcut = '\t%s\u00a0' % wxp.GetTranslatedShortcut(shortcut)
                         if os.name != 'nt' and wx.version() >= '2.9': # XXX
@@ -11800,7 +11822,7 @@ class MainFrame(wxp.Frame):
             menu = vidmenu.FindItemById(vidmenu.FindItem(_('&Zoom'))).GetSubMenu()
             menuItem = menu.FindItemById(id)
             if menuItem:
-                label = menuItem.GetLabel()
+                label = menuItem.GetItemLabelText()
                 break
         for i in range(6):
             menuItem = menu.FindItemByPosition(i)
@@ -11946,6 +11968,8 @@ class MainFrame(wxp.Frame):
         if self.boolSingleInstance:
             self.argsPosterThread.Stop()
         self.Destroy()
+        # wxPython 4.x: Ensure the app exits the main loop
+        wx.GetApp().ExitMainLoop()
     
     @AsyncCallWrapper
     def NewTab(self, copyselected=True, copytab=False, text='', select=True):
@@ -12720,7 +12744,8 @@ class MainFrame(wxp.Frame):
             selectedIndex = None
             self.SelectTab(self.scriptNotebook.GetPageCount() - 1)
             #~ for scriptname, boolSelected, scripttext in session['scripts']:
-            mapping = session['scripts'] and isinstance(session['scripts'][0], collections.Mapping)
+            # Python 3.3+: collections.Mapping moved to collections.abc.Mapping
+            mapping = session['scripts'] and isinstance(session['scripts'][0], collections.abc.Mapping)
             for item in session['scripts']:
                 index = self.LoadTab(item, compat=not mapping)
                 if mapping:

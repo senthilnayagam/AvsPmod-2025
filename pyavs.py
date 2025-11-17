@@ -714,7 +714,15 @@ if os.name == 'nt':
         handleDib[0] = DrawDibOpen()
     
     def ExitRoutines():
-        DrawDibClose(handleDib[0])
+        # Python 3.x: Safely close DrawDib handle, ignore access violations
+        # The handle may already be invalid during shutdown
+        try:
+            if handleDib[0] is not None:
+                DrawDibClose(handleDib[0])
+                handleDib[0] = None
+        except (OSError, WindowsError):
+            # Ignore access violations during shutdown - handle already closed
+            pass
     
     
     class AvsClip(AvsClipBase):
