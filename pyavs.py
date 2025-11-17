@@ -278,7 +278,7 @@ class AvsClipBase:
             yLine += fontSize
             nChars = max(nChars, len(errLine))
         eLength = self.Framecount
-        eWidth = nChars * fontSize / 2
+        eWidth = nChars * fontSize // 2
         eHeight = yLine + fontSize/4
         firstLine = 'BlankClip(length=%(eLength)i,width=%(eWidth)i,height=%(eHeight)i)' % locals()
         errText = firstLine + '.'.join(lineList)
@@ -407,9 +407,11 @@ class AvsClipBase:
         return False
     
     def _cffi2ctypes_ptr(self, ptr):
-        return ctypes.cast(
-                    int(avisynth.ffi.cast('unsigned long long', ptr)), 
-                    ctypes.POINTER(ctypes.c_ubyte))
+        # Convert pointer to ctypes pointer
+        # ptr is already a ctypes pointer or integer address
+        if isinstance(ptr, int):
+            return ctypes.cast(ptr, ctypes.POINTER(ctypes.c_ubyte))
+        return ctypes.cast(ptr, ctypes.POINTER(ctypes.c_ubyte))
     
     def GetPixelYUV(self, x, y):
         if self.IsPlanar:
@@ -492,7 +494,7 @@ class AvsClipBase:
             match = re_res.match(width)
             if match:
                 if match.group(1) == '/':
-                    width = self.Width / int(match.group(2))
+                    width = self.Width // int(match.group(2))
                 else:
                     width = self.Width * int(match.group(2))
             else:
@@ -503,7 +505,7 @@ class AvsClipBase:
             match = re_res.match(height)
             if match:
                 if match.group(1) == '/':
-                    height = self.Height / int(match.group(2))
+                    height = self.Height // int(match.group(2))
                 else:
                     height = self.Height * int(match.group(2))
             else:
@@ -553,10 +555,8 @@ class AvsClipBase:
             P_UBYTE = ctypes.POINTER(ctypes.c_ubyte)
             if self.IsPlanar and not self.IsY8:
                 for plane in (avisynth.avs.AVS_PLANAR_Y, avisynth.avs.AVS_PLANAR_U, avisynth.avs.AVS_PLANAR_V):
-                    if x86_64:
-                        write_ptr = avisynth.ffi.cast('unsigned char *', write_addr)
-                    else:
-                        write_ptr = ctypes.cast(write_addr, P_UBYTE)
+                    # Use ctypes.cast for all platforms
+                    write_ptr = ctypes.cast(write_addr, P_UBYTE)
                     # using get_row_size(plane) and get_height(plane) breaks v2.5.8
                     width = frame.get_row_size() >> self.vi.get_plane_width_subsampling(plane)
                     height = frame.get_height() >> self.vi.get_plane_height_subsampling(plane)
@@ -565,10 +565,8 @@ class AvsClipBase:
                     write_addr += width * height
             else:
                 # Note that AviSynth uses BGR
-                if x86_64:
-                    write_ptr = avisynth.ffi.cast('unsigned char *', write_addr)
-                else:
-                    write_ptr = ctypes.cast(write_addr, P_UBYTE)
+                # Use ctypes.cast for all platforms
+                write_ptr = ctypes.cast(write_addr, P_UBYTE)
                 self.env.bit_blt(write_ptr, frame.get_row_size(), frame.get_read_ptr(), 
                             frame.get_pitch(), frame.get_row_size(), frame.get_height())
             return buf
@@ -769,7 +767,7 @@ if os.name == 'nt':
         
         def _GetFrame(self, frame):
             if AvsClipBase._GetFrame(self, frame):
-                self.bmih.biWidth = self.display_pitch * 8 / self.bmih.biBitCount
+                self.bmih.biWidth = self.display_pitch * 8 // self.bmih.biBitCount
                 return True
             return False
         

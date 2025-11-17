@@ -232,8 +232,12 @@ class AVS_ScriptEnvironment(object):
         return ctypes.c_void_p(obj.cdata)
     
     def __del__(self):
-        if hasattr(self, 'cdata') and self.cdata:
-            avs_delete_script_environment(self)
+        try:
+            if hasattr(self, 'cdata') and self.cdata:
+                avs_delete_script_environment(self)
+        except (OSError, AttributeError):
+            # Silently ignore access violations during cleanup
+            pass
     
     def invoke(self, name, args=[], arg_names=None):
         # Convert name to bytes for ctypes.c_char_p
@@ -981,15 +985,20 @@ class AVS_Value(object):
     # free memory
     
     def release(self):
-        if self.is_array():
-            for index in range(self.array_size()):
-                AVS_Value(self.cdata.d.a[index], self.env)
-        avs_release_value(self)
-        if self.is_defined():
-            self.set_void()
+        try:
+            if self.is_array():
+                for index in range(self.array_size()):
+                    AVS_Value(self.cdata.d.a[index], self.env)
+            avs_release_value(self)
+            if self.is_defined():
+                self.set_void()
+        except (OSError, AttributeError):
+            # Silently ignore access violations during cleanup
+            # This can happen when Python's GC tries to clean up already-freed AviSynth objects
+            pass
     
     def __del__(self):
-        if self._release_on_del:
+        if hasattr(self, '_release_on_del') and self._release_on_del:
             self.release()
 
 

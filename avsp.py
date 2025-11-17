@@ -9747,7 +9747,16 @@ class MainFrame(wxp.Frame):
         return True
     
     def OnMenuVideoPlay(self, event):
-        self.PlayPauseVideo()
+        try:
+            print("DEBUG: OnMenuVideoPlay called")
+            self.PlayPauseVideo()
+            print("DEBUG: PlayPauseVideo completed")
+        except Exception as e:
+            print(f"FATAL ERROR in OnMenuVideoPlay: {e}")
+            import traceback
+            traceback.print_exc()
+            wx.MessageBox(f"Error during video playback:\n{e}\n\nCheck console for details.", 
+                         "Playback Error", wx.OK | wx.ICON_ERROR)
     
     def OnMenuVideoPlayDecrement(self, event):
         if self.play_speed_factor == 'max':
@@ -13105,8 +13114,8 @@ class MainFrame(wxp.Frame):
             channels = 3
             color_type = 2
         bpp = channels * byte_depth
-        scanline_size = len(buf) / height
-        width = scanline_size / channels / byte_depth
+        scanline_size = len(buf) // height
+        width = scanline_size // channels // byte_depth
         if width <= 0 or height <= 0:
             raise ValueError("width and height must be greater than zero")
         if width > 2**32-1 or height > 2**32-1:
@@ -14625,19 +14634,28 @@ class MainFrame(wxp.Frame):
     def ShowVideoFrame(self, framenum=None, forceRefresh=False, wrap=True, script=None, 
                        userScrolling=False, keep_env=None, forceLayout=False, doLayout=True, 
                        resize=None, scroll=None, focus=True, adjust_handle=False, check_playing=False):
+        print(f"DEBUG: ShowVideoFrame called with framenum={framenum}, check_playing={check_playing}")
         if check_playing and not self.playing_video:
+            print("DEBUG: check_playing is True but not playing, returning")
             return
         # Exit if disable preview option is turned on
         if self.options['disablepreview']:
+            print("DEBUG: Preview disabled, returning")
             return
         # Update the script AVI
         if script is None:
             script = self.currentScript
+        print(f"DEBUG: script.AVI = {script.AVI}")
         if script.AVI is None:
+            print("DEBUG: script.AVI is None, setting forceRefresh")
             forceRefresh = True
         display_clip_refresh_needed = script.display_clip_refresh_needed
-        if self.UpdateScriptAVI(script, forceRefresh, keep_env=keep_env) is None:
+        print("DEBUG: About to call UpdateScriptAVI...")
+        update_result = self.UpdateScriptAVI(script, forceRefresh, keep_env=keep_env)
+        print(f"DEBUG: UpdateScriptAVI returned: {update_result}")
+        if update_result is None:
             #~ wx.MessageBox(_('Error loading the script'), _('Error'), style=wx.OK|wx.ICON_ERROR)
+            print("DEBUG: UpdateScriptAVI returned None, returning False")
             return False
         #~ # Exit if invalid user sliders
         #~ labels = []
@@ -14823,9 +14841,10 @@ class MainFrame(wxp.Frame):
         script.oldToggleTags = script.toggleTags
         script.lastFramenum = framenum
         script.lastLength = script.AVI.Framecount
+        print("DEBUG: ShowVideoFrame completed successfully")
         return True
-
-    def LayoutVideoWindows(self, w=None, h=None, resize=True, forcefit=False, forceRefresh=False):
+    
+    def LayoutVideoWindows(self, w=None, h=None, resize=False, doRefresh=True, forceRefresh=False, forcefit=False):
         if w is None:
             w = int(self.currentScript.AVI.DisplayWidth * self.zoomfactor)
         if h is None:
@@ -15068,6 +15087,7 @@ class MainFrame(wxp.Frame):
             self.PlayPauseVideo()
 
     def UpdateScriptAVI(self, script=None, forceRefresh=False, keep_env=None, prompt=True):
+        print(f"DEBUG: UpdateScriptAVI called, forceRefresh={forceRefresh}")
         if not script:
             script = self.currentScript
             index = self.scriptNotebook.GetSelection()
@@ -15077,6 +15097,7 @@ class MainFrame(wxp.Frame):
                 if script == self.scriptNotebook.GetPage(index):
                     break
         updateDisplayClip = False
+        print(f"DEBUG: script.AVI = {script.AVI}")
         if script.AVI is None:
             self.firstToggled = forceRefresh = True
         elif self.zoomwindow:
@@ -15145,13 +15166,22 @@ class MainFrame(wxp.Frame):
                     # vpy hack, remove when VapourSynth is supported
                     if os.name == 'nt' and filename.endswith('.vpy'):
                         self.SaveScript(filename)
+                    print("DEBUG: About to create AvsClip...")
+                    print(f"DEBUG: filename={filename}, workdir={workdir}")
                     busy_and_disabled = wx.BusyCursor(), wx.WindowDisabler()
                     script.AVI = None
-                    script.AVI = pyavs.AvsClip(
-                        self.getCleanText(scripttxt), filename, workdir=workdir, env=env, 
-                        fitHeight=fitHeight, fitWidth=fitWidth, oldFramecount=oldFramecount, 
-                        matrix=self.matrix, interlaced=self.interlaced, swapuv=self.swapuv, 
-                        bit_depth=self.bit_depth)
+                    try:
+                        script.AVI = pyavs.AvsClip(
+                            self.getCleanText(scripttxt), filename, workdir=workdir, env=env, 
+                            fitHeight=fitHeight, fitWidth=fitWidth, oldFramecount=oldFramecount, 
+                            matrix=self.matrix, interlaced=self.interlaced, swapuv=self.swapuv, 
+                            bit_depth=self.bit_depth)
+                        print("DEBUG: AvsClip created successfully")
+                    except Exception as e:
+                        print(f"FATAL: AvsClip creation failed: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        raise
                     del busy_and_disabled
                 if not script.AVI.initialized:
                     if prompt:
@@ -15529,118 +15559,139 @@ class MainFrame(wxp.Frame):
     
     def PlayPauseVideo(self, debug_stats=False):
         """Play/pause the preview clip"""
-        if self.playing_video:
-            if os.name == 'nt':
-                self.timeKillEvent(self.play_timer_id)
-                self.timeEndPeriod(self.play_timer_resolution)
+        try:
+            print(f"DEBUG: PlayPauseVideo called, playing_video={self.playing_video}")
+            if self.playing_video:
+                print("DEBUG: Stopping playback")
+                if os.name == 'nt':
+                    self.timeKillEvent(self.play_timer_id)
+                    self.timeEndPeriod(self.play_timer_resolution)
+                else:
+                    self.play_timer.Stop()
+                    #signal.setitimer(signal.ITIMER_REAL, 0) # see below
+                    #signal.signal(signal.SIGALRM, self.previous_signal_handler)
+                self.playing_video = False
+                self.play_button.SetBitmapLabel(self.bmpPlay)
+                self.play_button.Refresh()
+                if self.separatevideowindow:
+                    self.play_button2.SetBitmapLabel(self.bmpPlay)
+                    self.play_button2.Refresh()
+                print("DEBUG: Playback stopped successfully")
             else:
-                self.play_timer.Stop()
-                #signal.setitimer(signal.ITIMER_REAL, 0) # see below
-                #signal.signal(signal.SIGALRM, self.previous_signal_handler)
-            self.playing_video = False
-            self.play_button.SetBitmapLabel(self.bmpPlay)
-            self.play_button.Refresh()
-            if self.separatevideowindow:
-                self.play_button2.SetBitmapLabel(self.bmpPlay)
-                self.play_button2.Refresh()
-        elif self.ShowVideoFrame(focus=False) and not self.currentScript.AVI.IsErrorClip():
-            script = self.currentScript
-            if self.currentframenum == script.AVI.Framecount - 1:
-                return
-            self.playing_video = True
-            self.play_button.SetBitmapLabel(self.bmpPause)
-            self.play_button.Refresh()
-            if self.separatevideowindow:
-                self.play_button2.SetBitmapLabel(self.bmpPause)
-                self.play_button2.Refresh()
-            if self.play_speed_factor == 'max':
-                interval = 1.0 # use a timer anyway to avoid GUI refreshing issues
-            else:
-                interval =  1000 / (script.AVI.Framerate * self.play_speed_factor)
-            
-            if os.name == 'nt': # default Windows resolution is ~10 ms
+                print("DEBUG: About to call ShowVideoFrame...")
+                try:
+                    show_result = self.ShowVideoFrame(focus=False)
+                    print(f"DEBUG: ShowVideoFrame returned: {show_result}")
+                except Exception as e:
+                    print(f"FATAL: ShowVideoFrame crashed: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    raise
                 
-                def playback_timer(id, reserved, factor, reserved1, reserved2):
-                    """"Callback for a Windows Multimedia timer"""
-                    try:
-                        if not self.playing_video:
-                            return
-                        if debug_stats:
-                            current_time = time.time()
-                            debug_stats_str = str((current_time - self.previous_time) * 1000)
-                            self.previous_time = current_time
-                        if self.play_drop and self.play_speed_factor != 'max':
-                            frame = self.play_initial_frame
-                            increment = int(round(1000 * (time.time() - self.play_initial_time) / interval)) * factor
+                if show_result and not self.currentScript.AVI.IsErrorClip():
+                    print("DEBUG: Starting playback")
+                    script = self.currentScript
+                    if self.currentframenum == script.AVI.Framecount - 1:
+                        print("DEBUG: Already at last frame, not starting playback")
+                        return
+                    self.playing_video = True
+                self.play_button.SetBitmapLabel(self.bmpPause)
+                self.play_button.Refresh()
+                if self.separatevideowindow:
+                    self.play_button2.SetBitmapLabel(self.bmpPause)
+                    self.play_button2.Refresh()
+                print("DEBUG: About to setup timer...")
+                if self.play_speed_factor == 'max':
+                    interval = 1.0 # use a timer anyway to avoid GUI refreshing issues
+                else:
+                    interval =  1000 / (script.AVI.Framerate * self.play_speed_factor)
+                print(f"DEBUG: Timer interval={interval}ms")
+                
+                if os.name == 'nt': # default Windows resolution is ~10 ms
+                    
+                    def playback_timer(id, reserved, factor, reserved1, reserved2):
+                        """"Callback for a Windows Multimedia timer"""
+                        try:
+                            if not self.playing_video:
+                                return
                             if debug_stats:
-                                debug_stats_str += ' dropped: ' + str(increment - self.increment - 1)
-                                self.increment = increment
-                        else:
-                            frame = self.currentframenum
-                            increment = 1
+                                current_time = time.time()
+                                debug_stats_str = str((current_time - self.previous_time) * 1000)
+                                self.previous_time = current_time
+                            if self.play_drop and self.play_speed_factor != 'max':
+                                frame = self.play_initial_frame
+                                increment = int(round(1000 * (time.time() - self.play_initial_time) / interval)) * factor
+                                if debug_stats:
+                                    debug_stats_str += ' dropped: ' + str(increment - self.increment - 1)
+                                    self.increment = increment
+                            else:
+                                frame = self.currentframenum
+                                increment = 1
+                            if debug_stats:
+                                print(debug_stats_str)
+                            if not AsyncCall(self.ShowVideoFrame, frame + increment, 
+                                             check_playing=True, focus=False).Wait():
+                                return
+                            if self.currentframenum == script.AVI.Framecount - 1:
+                                self.PlayPauseVideo()
+                            else:
+                                wx.Yield()
+                        except Exception as e:
+                            print(f"Error in playback_timer: {e}")
+                            import traceback
+                            traceback.print_exc()
+                            self.PlayPauseVideo()  # Stop playback on error
+                    
+                    def WindowsTimer(interval, callback, periodic=True):
+                        """High precision timer (1 ms) using Windows Multimedia"""
+                        
+                        self.timeGetDevCaps = ctypes.windll.winmm.timeGetDevCaps
+                        self.timeBeginPeriod = ctypes.windll.winmm.timeBeginPeriod
+                        self.timeEndPeriod = ctypes.windll.winmm.timeEndPeriod
+                        self.timeSetEvent = ctypes.windll.winmm.timeSetEvent
+                        self.timeKillEvent = ctypes.windll.winmm.timeKillEvent
+                        
+                        callback_prototype = ctypes.WINFUNCTYPE(None, ctypes.c_uint, 
+                            ctypes.c_uint, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_ulong)
+                        self.timeSetEvent.argtypes = [ctypes.c_uint, ctypes.c_uint, 
+                            callback_prototype, ctypes.c_ulong, ctypes.c_uint]
+                        
+                        class TIMECAPS(ctypes.Structure):
+                            _fields_ = [("wPeriodMin", ctypes.c_uint), 
+                                        ("wPeriodMax", ctypes.c_uint)]
+                        
+                        caps = TIMECAPS()
+                        self.timeGetDevCaps(ctypes.byref(caps), ctypes.sizeof(caps))
+                        self.play_timer_resolution = max(1, caps.wPeriodMin)
+                        self.timeBeginPeriod(self.play_timer_resolution)
+                        
+                        interval0 = interval
+                        factor = max(1, int(round(self.play_timer_resolution / interval)))
+                        interval = int(round(interval * factor))
+                        self.callback_c = callback_prototype(callback)
+                        self.play_initial_frame = self.currentframenum
+                        self.play_initial_time = time.time()
                         if debug_stats:
-                            print(debug_stats_str)
-                        if not AsyncCall(self.ShowVideoFrame, frame + increment, 
-                                         check_playing=True, focus=False).Wait():
-                            return
-                        if self.currentframenum == script.AVI.Framecount - 1:
-                            self.PlayPauseVideo()
-                        else:
-                            wx.Yield()
-                    except Exception as e:
-                        print(f"Error in playback_timer: {e}")
-                        import traceback
-                        traceback.print_exc()
-                        self.PlayPauseVideo()  # Stop playback on error
+                            print('speed_factor: {0}, required_interval: {1} '\
+                                  'interval: {2} interval_factor: {3}'.format(
+                                  self.play_speed_factor, interval0, interval, factor))
+                            self.increment = 0
+                            self.previous_time = self.play_initial_time
+                        self.play_timer_id = self.timeSetEvent(interval, 
+                            self.play_timer_resolution, self.callback_c, factor, periodic)
+                    
+                    print("DEBUG: About to call WindowsTimer...")
+                    WindowsTimer(interval, playback_timer)
+                    print("DEBUG: WindowsTimer setup complete")
                 
-                def WindowsTimer(interval, callback, periodic=True):
-                    """High precision timer (1 ms) using Windows Multimedia"""
+                else: # wx.Timer on *nix.  There's some pending events issues
+                    # TODO: fix/replace wx.Timer
                     
-                    self.timeGetDevCaps = ctypes.windll.winmm.timeGetDevCaps
-                    self.timeBeginPeriod = ctypes.windll.winmm.timeBeginPeriod
-                    self.timeEndPeriod = ctypes.windll.winmm.timeEndPeriod
-                    self.timeSetEvent = ctypes.windll.winmm.timeSetEvent
-                    self.timeKillEvent = ctypes.windll.winmm.timeKillEvent
-                    
-                    callback_prototype = ctypes.WINFUNCTYPE(None, ctypes.c_uint, 
-                        ctypes.c_uint, ctypes.c_ulong, ctypes.c_ulong, ctypes.c_ulong)
-                    self.timeSetEvent.argtypes = [ctypes.c_uint, ctypes.c_uint, 
-                        callback_prototype, ctypes.c_ulong, ctypes.c_uint]
-                    
-                    class TIMECAPS(ctypes.Structure):
-                        _fields_ = [("wPeriodMin", ctypes.c_uint), 
-                                    ("wPeriodMax", ctypes.c_uint)]
-                    
-                    caps = TIMECAPS()
-                    self.timeGetDevCaps(ctypes.byref(caps), ctypes.sizeof(caps))
-                    self.play_timer_resolution = max(1, caps.wPeriodMin)
-                    self.timeBeginPeriod(self.play_timer_resolution)
-                    
-                    interval0 = interval
-                    factor = max(1, int(round(self.play_timer_resolution / interval)))
-                    interval = int(round(interval * factor))
-                    self.callback_c = callback_prototype(callback)
-                    self.play_initial_frame = self.currentframenum
-                    self.play_initial_time = time.time()
-                    if debug_stats:
-                        print('speed_factor: {0}, required_interval: {1} '\
-                              'interval: {2} interval_factor: {3}'.format(
-                              self.play_speed_factor, interval0, interval, factor))
-                        self.increment = 0
-                        self.previous_time = self.play_initial_time
-                    self.play_timer_id = self.timeSetEvent(interval, 
-                        self.play_timer_resolution, self.callback_c, factor, periodic)
-                
-                WindowsTimer(interval, playback_timer)
-            
-            else: # wx.Timer on *nix.  There's some pending events issues
-                # TODO: fix/replace wx.Timer
-                
-                # signal module causes segmentation fault on high fps
-                # similar issues using librt with ctypes
-                '''
-                global signal
-                import signal
+                    # signal module causes segmentation fault on high fps
+                    # similar issues using librt with ctypes
+                    '''
+                    global signal
+                    import signal
                 
                 def playback_timer(signum, frame):
                     """"SIGALRM handler"""
@@ -15733,6 +15784,12 @@ class MainFrame(wxp.Frame):
                           'interval: {2} interval_factor: {3}'.format(
                           self.play_speed_factor, interval0, interval, factor))
                 self.play_timer.Start(interval)
+        except Exception as e:
+            print(f"FATAL ERROR in PlayPauseVideo: {e}")
+            import traceback
+            traceback.print_exc()
+            self.playing_video = False
+            raise
     
     def RunExternalPlayer(self, path=None, script=None, args=None, prompt=True):
         if script is None:

@@ -365,7 +365,7 @@ class AvsClip:
         bmpheadersize = 40
         extrabytes = (4 - self.bmih.biWidth % 4) % 4
         widthPadded = self.bmih.biWidth + extrabytes
-        bitmapsize = (widthPadded * self.bmih.biHeight * self.bmih.biBitCount) / 8
+        bitmapsize = (widthPadded * self.bmih.biHeight * self.bmih.biBitCount) // 8
         bfType = WORD(0x4d42)
         bfSize = DWORD(fileheadersize + bmpheadersize + bitmapsize)
         bfReserved1 = WORD(0)
